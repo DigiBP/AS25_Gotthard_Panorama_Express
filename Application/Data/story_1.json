@@ -397,7 +397,7 @@
     },
     {
         // Leftover medications after surgery that need to be stored again
-        // (either vial/ampule opened (as "amount_left_opened") or NOT opened (as "amount_left_unopened"))
+        // (either vial/ampule opened (as "amount_left_opened") or NOT opened (as "amount_left_unopened" --> it goes directly back to storage room as it was not used at all))
         "leftover_med_list": [
             {
                 "medicationId": "relaxant-001",
