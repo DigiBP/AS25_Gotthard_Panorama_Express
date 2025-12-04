@@ -39,7 +39,9 @@ export default {
                 { name: 'orderCreation', label: 'Create Order', icon: '📝' },
                 { name: 'inventory', label: 'Inventory', icon: '📦' },
                 { name: 'Reports and analyse', label: 'Reports', icon: '📊' },
-                { name: 'digital carts', label: 'Carts', icon: '🛒' }
+                { name: 'digital carts', label: 'Carts', icon: '🛒' },
+                { name: 'chat', label: 'Chat', icon: '💬' },
+                { name: 'checklist', label: 'Checklist', icon: '✅' }
             ],
             selectedId: '',
             store: null
