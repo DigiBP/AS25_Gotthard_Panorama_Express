@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: fastapi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gotthard_user
+      POSTGRES_PASSWORD: panorama_password
+      POSTGRES_DB: express_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
