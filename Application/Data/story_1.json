@@ -1,5 +1,6 @@
 [
     {
+        // Standard medications used at the start before surgery
         "std_med_list": [
             {
                 "medicationId": "relaxant-001",
@@ -116,6 +117,7 @@
         ]
     },
     {
+        // Additional medications used at during surgery from ANOTHER departments
         "add_med_list": [
             {
                 "medicationId": "antibiotic-004",
@@ -148,6 +150,8 @@
         ]
     },
     {
+        // Additional medications used during surgery from THE ANAESTHESIA department 
+        // (either direct from the anaesthesia cart (as "cart_med = 1") or to the storage room near the surgery theatre (as "cart_med = 0"))
         "extra_used_med_list": [
             {
                 "medicationId": "analgesic-001",
@@ -159,6 +163,7 @@
                 "quantity": 100,
                 "unit": "mL",
                 "amount_used": 1,
+                "cart_med": 0,
                 "restriction": 0,
                 "location": "Cabinet B1",
                 "chemical_stability_h": 24,
@@ -174,6 +179,7 @@
                 "quantity": 100,
                 "unit": "mL",
                 "amount_used": 1,
+                "cart_med": 1,
                 "restriction": 0,
                 "location": "Cabinet B3",
                 "chemical_stability_h": 24,
@@ -188,6 +194,8 @@
                 "dosage": "10 mg/mL",
                 "quantity": 5,
                 "unit": "mL",
+                "amount_used": 4,
+                "cart_med": 0,
                 "restriction": 0,
                 "location": "Fridge A3",
                 "chemical_stability_h": 24,
@@ -202,6 +210,8 @@
                 "dosage": "50 mcg/ml",
                 "quantity": 10,
                 "unit": "mL",
+                "amount_used": 2,
+                "cart_med": 0,
                 "restriction": 1,
                 "location": "Specialbox Opioids",
                 "chemical_stability_h": 28,
@@ -216,24 +226,12 @@
                 "dosage": "5 mg",
                 "quantity": 1,
                 "unit": "vial",
+                "amount_used": 1,
                 "restriction": 1,
+                "cart_med": 0,
                 "location": "Specialbox Opioids",
                 "chemical_stability_h": 28,
                 "batchNumber": "AMX20230616"
-            },
-            {
-                "medicationId": "local_anesthetic-001",
-                "name": "lidocaine",
-                "formula": "solution",
-                "expirationDate": "2027-10-21",
-                "producer": "Bichsel GmbH",
-                "dosage": "10 mg/mL",
-                "quantity": 5,
-                "unit": "mL",
-                "restriction": 0,
-                "location": "Cabinet A1",
-                "chemical_stability_h": 24,
-                "batchNumber": "MDG20231212"
             },
             {
                 "medicationId": "vasoactive-001",
@@ -244,6 +242,8 @@
                 "dosage": "5 mg/mL",
                 "quantity": 10,
                 "unit": "mL",
+                "amount_used": 1,
+                "cart_med": 1,
                 "restriction": 0,
                 "location": "Cabinet G2",
                 "chemical_stability_h": 24,
@@ -258,6 +258,8 @@
                 "dosage": "100 mcg/mL",
                 "quantity": 5,
                 "unit": "mL",
+                "amount_used": 2,
+                "cart_med": 1,
                 "restriction": 0,
                 "location": "Cabinet G4",
                 "chemical_stability_h": 24,
@@ -272,6 +274,8 @@
                 "dosage": "10 mg/mL",
                 "quantity": 50,
                 "unit": "mL",
+                "amount_used": 6,
+                "cart_med": 1,
                 "restriction": 0,
                 "location": "Cabinet I2",
                 "chemical_stability_h": 6,
@@ -286,56 +290,174 @@
                 "dosage": "",
                 "quantity": 1000,
                 "unit": "mL",
+                "amount_used": 4,
+                "cart_med": 0,
                 "restriction": 0,
                 "location": "Cabinet K1",
                 "chemical_stability_h": 999999,
                 "batchNumber": "ABB20221543"
             },
             {
-                "medicationId": "antibiotic-004",
-                "name": "Ertapenem",
-                "formula": "powder for solution for injection",
-                "expirationDate": "2028-03-08",
-                "producer": "MSD Pharma GmbH",
-                "dosage": "1000 mg",
+                "medicationId": "hypnotic-002",
+                "name": "ketamine",
+                "formula": "solution for injection",
+                "expirationDate": "2029-03-10",
+                "producer": "Ratiopharm GmbH",
+                "dosage": "10 mg/mL",
+                "quantity": 10,
+                "unit": "mL",
+                "amount_used": 1,
+                "cart_med": 0,
+                "restriction": 0,
+                "location": "Specialbox Anesthetics",
+                "chemical_stability_h": 24,
+                "batchNumber": "RPH20240225"
+            },
+            {
+                "medicationId": "analgetic-001",
+                "name": "novalgin",
+                "formula": "solution for injection",
+                "expirationDate": "2028-08-18",
+                "producer": "Janssen-Cilag GmbH",
+                "dosage": "500 mg/mL",
+                "quantity": 2,
+                "unit": "mL",
+                "amount_used": 1,
+                "cart_med": 1,
+                "restriction": 0,
+                "location": "Cabinet C2",
+                "chemical_stability_h": 24,
+                "batchNumber": "JNC20231020"
+            },
+            {
+                "medicationId": "antibiotic-006",
+                "name": "metronidazole",
+                "formula": "solution",
+                "expirationDate": "2028-03-10",
+                "producer": "Zentiva Pharma GmbH",
+                "dosage": "500 mg",
                 "quantity": 1,
                 "unit": "vial",
+                "amount_used": 1,
+                "cart_med": 0,
                 "restriction": 0,
-                "location": "ICU Cabinet R4",
+                "location": "Cabinet B7",
                 "chemical_stability_h": 24,
-                "batchNumber": "MSD20230220"
+                "batchNumber": "CZG20230331"
+            },
+            {
+                "medicationId": "antiemetic-001",
+                "name": "ondansetron",
+                "formula": "solution for injection",
+                "expirationDate": "2029-01-15",
+                "producer": "Labatec GmbH & Co. KG",
+                "dosage": "2 mg/mL",
+                "quantity": 2,
+                "unit": "mL",
+                "amount_used": 1,
+                "cart_med": 1,
+                "restriction": 0,
+                "location": "Cabinet D2",
+                "chemical_stability_h": 24,
+                "batchNumber": "MDP20240220"
+            },
+            {
+                "medicationId": "steroid-001",
+                "name": "dexamethasone",
+                "formula": "solution for injection",
+                "expirationDate": "2028-07-19",
+                "producer": "Haupt Pharma Amareg GmbH",
+                "dosage": "4 mg/mL",
+                "quantity": 1,
+                "unit": "mL",
+                "amount_used": 2,
+                "cart_med": 1,
+                "restriction": 0,
+                "location": "Cabinet E1",
+                "chemical_stability_h": 24,
+                "batchNumber": "HPA20230630"
             },
             {
                 "medicationId": "infusion-002",
-                "name": "Sodium bicarbonate",
-                "formula": "solution",
-                "expirationDate": "2026-11-05",
+                "name": "NaCl",
+                "formula": "solution for infusion",
+                "expirationDate": "2029-12-05",
                 "producer": "Fresenius Kabi",
-                "dosage": "0.840",
-                "quantity": 10,
+                "dosage": "",
+                "quantity": 100,
                 "unit": "mL",
+                "amount_used": 3,
+                "cart_med": 0,
                 "restriction": 0,
-                "location": "ED Cabinet L4",
-                "chemical_stability_h": 24,
-                "batchNumber": "ABB20231677"
+                "location": "Cabinet K2",
+                "chemical_stability_h": 999679,
+                "batchNumber": "ABB20221673"
             }
         ]
     },
     {
+        // Leftover medications after surgery that need to be stored again
+        // (either vial/ampule opened (as "amount_left_opened") or NOT opened (as "amount_left_unopened" --> it goes directly back to storage room as it was not used at all))
         "leftover_med_list": [
             {
-                "medicationId": "analgesic-001",
-                "name": "paracetamol",
-                "formula": "solution for infusion",
-                "expirationDate": "2029-06-15",
-                "producer": "B. Braun Melsungen AG",
+                "medicationId": "relaxant-001",
+                "name": "rocuronium",
+                "formula": "solution",
+                "expirationDate": "2028-12-29",
+                "producer": "Kohlpharma GmbH",
                 "dosage": "10 mg/mL",
-                "quantity": 100,
+                "quantity": 5,
                 "unit": "mL",
+                "amount_left_opened": 1,
                 "restriction": 0,
-                "location": "Cabinet B1",
+                "location": "Fridge A3",
                 "chemical_stability_h": 24,
-                "batchNumber": "BBM20230601"
+                "batchNumber": "1189546"
+            },
+            {
+                "medicationId": "opioid-001",
+                "name": "fentanyl",
+                "formula": "solution",
+                "expirationDate": "2027-05-12",
+                "producer": "Sintetica Pharma GmbH",
+                "dosage": "50 mcg/ml",
+                "quantity": 10,
+                "unit": "mL",
+                "amount_left_unopened": 1,
+                "restriction": 1,
+                "location": "Specialbox Opioids",
+                "chemical_stability_h": 28,
+                "batchNumber": "AMX20230615"
+            },
+            {
+                "medicationId": "hypnotic-002",
+                "name": "ketamine",
+                "formula": "solution for injection",
+                "expirationDate": "2029-03-10",
+                "producer": "Ratiopharm GmbH",
+                "dosage": "10 mg/mL",
+                "quantity": 10,
+                "unit": "mL",
+                "amount_left_opened": 1,
+                "restriction": 0,
+                "location": "Specialbox Anesthetics",
+                "chemical_stability_h": 24,
+                "batchNumber": "RPH20240225"
+            },
+            {
+                "medicationId": "opioid-002",
+                "name": "remifentanil",
+                "formula": "powder for solution for injection",
+                "expirationDate": "2027-05-12",
+                "producer": "Fresenius Kabi Deutschland GmbH",
+                "dosage": "5 mg",
+                "quantity": 1,
+                "unit": "vial",
+                "amount_left_opened": 1,
+                "restriction": 1,
+                "location": "Specialbox Opioids",
+                "chemical_stability_h": 28,
+                "batchNumber": "AMX20230616"
             }
         ]
     }
