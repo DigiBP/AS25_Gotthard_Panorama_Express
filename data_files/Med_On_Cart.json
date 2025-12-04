@@ -1,0 +1,22 @@
+[
+  {
+    "CartId": "001",
+    "CartStatus": "in-use",
+    "patientId": "12345",
+    "Operation": "Dekompression",
+    "operationDate": "2025-12-29",
+    "FormofAnaesthesia": "General",
+    "Medication": "lidocain",
+    "OperationRoom": "01"
+  },
+  {
+    "CartId": "002",
+    "CartStatus": "used",
+    "patientId": "12245",
+    "Operation": "Port-Einlage",
+    "operationDate": "2025-12-28",
+    "FormofAnaesthesia": "Standyby",
+    "Medication": "lidocain",
+    "OperationRoom": "11"
+  }
+]

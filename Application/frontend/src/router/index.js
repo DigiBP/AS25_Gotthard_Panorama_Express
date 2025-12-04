@@ -28,6 +28,18 @@ const router = createRouter({
       props: false,
       component: () => import('../views/DigitalCarts.vue')
     }
+    ,
+    {
+      name: 'chat',
+      props: false,
+      component: () => import('../views/ChatView.vue')
+    }
+    ,
+    {
+      name: 'checklist',
+      props: false,
+      component: () => import('../views/ChecklistView.vue')
+    }
   ]
 })
 
