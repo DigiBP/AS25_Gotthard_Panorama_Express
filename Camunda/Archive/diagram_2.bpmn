@@ -1,0 +1,750 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0"
+                  id="Definitions_MedStock_Optimized_Highlighted"
+                  targetNamespace="http://example.org/medication-stock-bpmn">
+
+  <!-- =================================================================== -->
+  <!-- Messages                                                            -->
+  <!-- =================================================================== -->
+  <bpmn:message id="Message_OrderNeed" name="OrderNeed" />
+  <bpmn:message id="Message_OrderCompleted" name="OrderCompleted" />
+  <bpmn:message id="Message_PurchaseOrder" name="PurchaseOrder" />
+  <bpmn:message id="Message_SupplierConfirmation" name="SupplierConfirmation" />
+  <bpmn:message id="Message_TransferRequest" name="TransferRequest" />
+  <bpmn:message id="Message_TransferDelivered" name="TransferDelivered" />
+
+  <!-- =================================================================== -->
+  <!-- Collaboration                                                       -->
+  <!-- =================================================================== -->
+  <bpmn:collaboration id="Collaboration_MedicationStock">
+    <bpmn:participant id="Participant_Preoperative" name="Preoperative Unit" processRef="Process_Preoperative" />
+    <bpmn:participant id="Participant_Postoperative" name="Postoperative Unit" processRef="Process_Postoperative" />
+    <bpmn:participant id="Participant_OrderMgmt" name="Order Management Service" processRef="Process_OrderManagement" />
+    <bpmn:participant id="Participant_Supplier" name="Supplier System" processRef="Process_Supplier" />
+    <bpmn:participant id="Participant_OtherDept" name="Other Department" processRef="Process_OtherDept" />
+
+    <!-- Message Flows -->
+    <bpmn:messageFlow id="Flow_Preop_OrderNeed" name="Order Need"
+                      sourceRef="SendTask_Preop_SendOrderNeed"
+                      targetRef="Start_OM_OrderNeed"
+                      messageRef="Message_OrderNeed" />
+    <bpmn:messageFlow id="Flow_Postop_OrderNeed" name="Order Need"
+                      sourceRef="SendTask_Postop_SendOrderNeed"
+                      targetRef="Start_OM_OrderNeed"
+                      messageRef="Message_OrderNeed" />
+    <bpmn:messageFlow id="Flow_OM_To_Preop_OrderCompleted" name="Order Completed"
+                      sourceRef="ThrowEvent_OM_OrderCompleted"
+                      targetRef="CatchEvent_Preop_OrderCompleted"
+                      messageRef="Message_OrderCompleted" />
+    <bpmn:messageFlow id="Flow_OM_To_Postop_OrderCompleted" name="Order Completed"
+                      sourceRef="ThrowEvent_OM_OrderCompleted"
+                      targetRef="CatchEvent_Postop_OrderCompleted"
+                      messageRef="Message_OrderCompleted" />
+    <bpmn:messageFlow id="Flow_OM_To_Supplier_PO" name="Purchase Order"
+                      sourceRef="ServiceTask_OM_SendToSupplier"
+                      targetRef="CatchEvent_Supplier_PO"
+                      messageRef="Message_PurchaseOrder" />
+    <bpmn:messageFlow id="Flow_Supplier_To_OM_Confirmation" name="Supplier Confirmation"
+                      sourceRef="ThrowEvent_Supplier_Confirmation"
+                      targetRef="CatchEvent_OM_SupplierConfirmation"
+                      messageRef="Message_SupplierConfirmation" />
+    <bpmn:messageFlow id="Flow_Preop_To_OtherDept_TransferReq" name="Transfer Request"
+                      sourceRef="SendTask_Preop_RequestTransfer"
+                      targetRef="CatchEvent_OtherDept_TransferRequest"
+                      messageRef="Message_TransferRequest" />
+    <bpmn:messageFlow id="Flow_OtherDept_To_Preop_TransferDelivered" name="Transfer Delivered"
+                      sourceRef="ThrowEvent_OtherDept_TransferDelivered"
+                      targetRef="CatchEvent_Preop_TransferDelivered"
+                      messageRef="Message_TransferDelivered" />
+  </bpmn:collaboration>
+
+  <!-- =================================================================== -->
+  <!-- Process: Preoperative Unit                                          -->
+  <!-- =================================================================== -->
+  <bpmn:process id="Process_Preoperative" name="Preoperative Medication Preparation" isExecutable="true">
+
+    <bpmn:startEvent id="Start_Preop_MedNeeded" name="Medication Needed">
+      <bpmn:outgoing>Flow_Preop_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_Preop_QueryChecklist" name="Query Medication Checklist">
+      <bpmn:incoming>Flow_Preop_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Preop_CheckStock" name="Check Local & Main Storage Stock">
+      <bpmn:incoming>Flow_Preop_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Preop_StockAvailable" name="Stock available in unit?">
+      <bpmn:incoming>Flow_Preop_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_YesStock</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Preop_NoStock</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="Task_Preop_PickFromStorage" name="Pick Medication from Storage">
+      <bpmn:incoming>Flow_Preop_YesStock</bpmn:incoming>
+      <bpmn:incoming>Flow_Preop_UpdateTransferToPick</bpmn:incoming>
+      <bpmn:incoming>Flow_Preop_UpdateOrderToPick</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_PickToEnd</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Preop_AvailableOtherDept" name="Available in other department?">
+      <bpmn:incoming>Flow_Preop_NoStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_AvailOtherYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Preop_AvailOtherNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="SendTask_Preop_RequestTransfer" name="Request Transfer from Other Department" messageRef="Message_TransferRequest">
+      <bpmn:incoming>Flow_Preop_AvailOtherYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_ToTransferWait</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_Preop_TransferDelivered" name="Transfer Delivered">
+      <bpmn:incoming>Flow_Preop_ToTransferWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_TransferDeliveredToUpdate</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_TransferDelivered" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_Preop_UpdateAfterTransfer" name="Update Inventory (Transfer)">
+      <bpmn:incoming>Flow_Preop_TransferDeliveredToUpdate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_UpdateTransferToPick</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sendTask id="SendTask_Preop_SendOrderNeed" name="Send Order Need to Order Management" messageRef="Message_OrderNeed">
+      <bpmn:incoming>Flow_Preop_AvailOtherNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_ToOrderWait</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_Preop_OrderCompleted" name="Order Completed">
+      <bpmn:incoming>Flow_Preop_ToOrderWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_OrderCompletedToUpdate</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_OrderCompleted" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_Preop_UpdateAfterOrder" name="Update Inventory (Order Received)">
+      <bpmn:incoming>Flow_Preop_OrderCompletedToUpdate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Preop_UpdateOrderToPick</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Preop_Ready" name="Ready for Surgery">
+      <bpmn:incoming>Flow_Preop_PickToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_Preop_1" sourceRef="Start_Preop_MedNeeded" targetRef="Task_Preop_QueryChecklist" />
+    <bpmn:sequenceFlow id="Flow_Preop_2" sourceRef="Task_Preop_QueryChecklist" targetRef="Task_Preop_CheckStock" />
+    <bpmn:sequenceFlow id="Flow_Preop_3" sourceRef="Task_Preop_CheckStock" targetRef="Gateway_Preop_StockAvailable" />
+    <bpmn:sequenceFlow id="Flow_Preop_YesStock" name="Yes" sourceRef="Gateway_Preop_StockAvailable" targetRef="Task_Preop_PickFromStorage" />
+    <bpmn:sequenceFlow id="Flow_Preop_NoStock" name="No" sourceRef="Gateway_Preop_StockAvailable" targetRef="Gateway_Preop_AvailableOtherDept" />
+    <bpmn:sequenceFlow id="Flow_Preop_AvailOtherYes" name="Yes" sourceRef="Gateway_Preop_AvailableOtherDept" targetRef="SendTask_Preop_RequestTransfer" />
+    <bpmn:sequenceFlow id="Flow_Preop_AvailOtherNo" name="No" sourceRef="Gateway_Preop_AvailableOtherDept" targetRef="SendTask_Preop_SendOrderNeed" />
+    <bpmn:sequenceFlow id="Flow_Preop_ToTransferWait" sourceRef="SendTask_Preop_RequestTransfer" targetRef="CatchEvent_Preop_TransferDelivered" />
+    <bpmn:sequenceFlow id="Flow_Preop_TransferDeliveredToUpdate" sourceRef="CatchEvent_Preop_TransferDelivered" targetRef="Task_Preop_UpdateAfterTransfer" />
+    <bpmn:sequenceFlow id="Flow_Preop_UpdateTransferToPick" sourceRef="Task_Preop_UpdateAfterTransfer" targetRef="Task_Preop_PickFromStorage" />
+    <bpmn:sequenceFlow id="Flow_Preop_ToOrderWait" sourceRef="SendTask_Preop_SendOrderNeed" targetRef="CatchEvent_Preop_OrderCompleted" />
+    <bpmn:sequenceFlow id="Flow_Preop_OrderCompletedToUpdate" sourceRef="CatchEvent_Preop_OrderCompleted" targetRef="Task_Preop_UpdateAfterOrder" />
+    <bpmn:sequenceFlow id="Flow_Preop_UpdateOrderToPick" sourceRef="Task_Preop_UpdateAfterOrder" targetRef="Task_Preop_PickFromStorage" />
+    <bpmn:sequenceFlow id="Flow_Preop_PickToEnd" sourceRef="Task_Preop_PickFromStorage" targetRef="End_Preop_Ready" />
+  </bpmn:process>
+
+  <!-- =================================================================== -->
+  <!-- Process: Postoperative Unit                                         -->
+  <!-- =================================================================== -->
+  <bpmn:process id="Process_Postoperative" name="Postoperative Cart & Second Chance Tray" isExecutable="true">
+
+    <bpmn:startEvent id="Start_Postop_OperationEnded" name="Operation Ended">
+      <bpmn:outgoing>Flow_Postop_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_Postop_ScanUsage" name="Scan Used & Unused Meds (RFID/Barcode)">
+      <bpmn:incoming>Flow_Postop_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Postop_ItemUsed" name="Item used?">
+      <bpmn:incoming>Flow_Postop_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_UsedYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Postop_UsedNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_Postop_UpdateUsage_Immediate" name="Update Usage Log">
+      <bpmn:incoming>Flow_Postop_UsedYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_UsedToCheckCart</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Postop_Reusable" name="Reusable?">
+      <bpmn:incoming>Flow_Postop_UsedNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_ReusableYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Postop_ReusableNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_Postop_RegisterSecondChance" name="Register on Second Chance Tray">
+      <bpmn:incoming>Flow_Postop_ReusableYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_RegToEBG</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:eventBasedGateway id="EBG_Postop_SecondChance" name="Used or Expired?">
+      <bpmn:incoming>Flow_Postop_RegToEBG</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_EBGToUsed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Postop_EBGToExpired</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_Postop_SecondChanceUsed" name="Item Used from Tray">
+      <bpmn:incoming>Flow_Postop_EBGToUsed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_UsedEvToUpdate</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_Postop_UpdateUsage_SecondChance" name="Update Usage Log (Second Chance)">
+      <bpmn:incoming>Flow_Postop_UsedEvToUpdate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_SecondChanceToCheckCart</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_Postop_SecondChanceExpired" name="Expiry Reached">
+      <bpmn:incoming>Flow_Postop_EBGToExpired</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_ExpToDispose</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>PT0S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_Postop_Dispose_FromTray" name="Dispose Expired Medication">
+      <bpmn:incoming>Flow_Postop_ExpToDispose</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_DisposeFromTrayToCheckCart</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Postop_Dispose_Immediate" name="Dispose Medication">
+      <bpmn:incoming>Flow_Postop_ReusableNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_DisposeImmediateToCheckCart</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Postop_CheckCartStock" name="Check Cart Stock Level">
+      <bpmn:incoming>Flow_Postop_UsedToCheckCart</bpmn:incoming>
+      <bpmn:incoming>Flow_Postop_SecondChanceToCheckCart</bpmn:incoming>
+      <bpmn:incoming>Flow_Postop_DisposeFromTrayToCheckCart</bpmn:incoming>
+      <bpmn:incoming>Flow_Postop_DisposeImmediateToCheckCart</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_ToBelowThresh</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Postop_BelowThresh" name="Stock below threshold?">
+      <bpmn:incoming>Flow_Postop_ToBelowThresh</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_BelowYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Postop_BelowNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sendTask id="SendTask_Postop_SendOrderNeed" name="Send Order Need to Order Management" messageRef="Message_OrderNeed">
+      <bpmn:incoming>Flow_Postop_BelowYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_OrderReqToWait</bpmn:outgoing>
+    </bpmn:sendTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_Postop_OrderCompleted" name="Order Completed">
+      <bpmn:incoming>Flow_Postop_OrderReqToWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_OrderCompletedToConfirm</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_OrderCompleted" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_Postop_ConfirmReplenish" name="Confirm Replenishment & Update Inventory">
+      <bpmn:incoming>Flow_Postop_OrderCompletedToConfirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_Postop_ToEndRestocked</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Postop_Restocked" name="Restocked">
+      <bpmn:incoming>Flow_Postop_ToEndRestocked</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="End_Postop_Complete" name="Complete (No Reorder)">
+      <bpmn:incoming>Flow_Postop_BelowNo</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_Postop_1" sourceRef="Start_Postop_OperationEnded" targetRef="Task_Postop_ScanUsage" />
+    <bpmn:sequenceFlow id="Flow_Postop_2" sourceRef="Task_Postop_ScanUsage" targetRef="Gateway_Postop_ItemUsed" />
+    <bpmn:sequenceFlow id="Flow_Postop_UsedYes" name="Yes" sourceRef="Gateway_Postop_ItemUsed" targetRef="Task_Postop_UpdateUsage_Immediate" />
+    <bpmn:sequenceFlow id="Flow_Postop_UsedNo" name="No" sourceRef="Gateway_Postop_ItemUsed" targetRef="Gateway_Postop_Reusable" />
+    <bpmn:sequenceFlow id="Flow_Postop_UsedToCheckCart" sourceRef="Task_Postop_UpdateUsage_Immediate" targetRef="Task_Postop_CheckCartStock" />
+    <bpmn:sequenceFlow id="Flow_Postop_ReusableYes" name="Yes" sourceRef="Gateway_Postop_Reusable" targetRef="Task_Postop_RegisterSecondChance" />
+    <bpmn:sequenceFlow id="Flow_Postop_ReusableNo" name="No" sourceRef="Gateway_Postop_Reusable" targetRef="Task_Postop_Dispose_Immediate" />
+    <bpmn:sequenceFlow id="Flow_Postop_RegToEBG" sourceRef="Task_Postop_RegisterSecondChance" targetRef="EBG_Postop_SecondChance" />
+    <bpmn:sequenceFlow id="Flow_Postop_EBGToUsed" sourceRef="EBG_Postop_SecondChance" targetRef="CatchEvent_Postop_SecondChanceUsed" />
+    <bpmn:sequenceFlow id="Flow_Postop_EBGToExpired" sourceRef="EBG_Postop_SecondChance" targetRef="CatchEvent_Postop_SecondChanceExpired" />
+    <bpmn:sequenceFlow id="Flow_Postop_UsedEvToUpdate" sourceRef="CatchEvent_Postop_SecondChanceUsed" targetRef="Task_Postop_UpdateUsage_SecondChance" />
+    <bpmn:sequenceFlow id="Flow_Postop_SecondChanceToCheckCart" sourceRef="Task_Postop_UpdateUsage_SecondChance" targetRef="Task_Postop_CheckCartStock" />
+    <bpmn:sequenceFlow id="Flow_Postop_ExpToDispose" sourceRef="CatchEvent_Postop_SecondChanceExpired" targetRef="Task_Postop_Dispose_FromTray" />
+    <bpmn:sequenceFlow id="Flow_Postop_DisposeFromTrayToCheckCart" sourceRef="Task_Postop_Dispose_FromTray" targetRef="Task_Postop_CheckCartStock" />
+    <bpmn:sequenceFlow id="Flow_Postop_DisposeImmediateToCheckCart" sourceRef="Task_Postop_Dispose_Immediate" targetRef="Task_Postop_CheckCartStock" />
+    <bpmn:sequenceFlow id="Flow_Postop_ToBelowThresh" sourceRef="Task_Postop_CheckCartStock" targetRef="Gateway_Postop_BelowThresh" />
+    <bpmn:sequenceFlow id="Flow_Postop_BelowYes" name="Yes" sourceRef="Gateway_Postop_BelowThresh" targetRef="SendTask_Postop_SendOrderNeed" />
+    <bpmn:sequenceFlow id="Flow_Postop_BelowNo" name="No" sourceRef="Gateway_Postop_BelowThresh" targetRef="End_Postop_Complete" />
+    <bpmn:sequenceFlow id="Flow_Postop_OrderReqToWait" sourceRef="SendTask_Postop_SendOrderNeed" targetRef="CatchEvent_Postop_OrderCompleted" />
+    <bpmn:sequenceFlow id="Flow_Postop_OrderCompletedToConfirm" sourceRef="CatchEvent_Postop_OrderCompleted" targetRef="Task_Postop_ConfirmReplenish" />
+    <bpmn:sequenceFlow id="Flow_Postop_ToEndRestocked" sourceRef="Task_Postop_ConfirmReplenish" targetRef="End_Postop_Restocked" />
+  </bpmn:process>
+
+  <!-- =================================================================== -->
+  <!-- Process: Order Management                                           -->
+  <!-- =================================================================== -->
+  <bpmn:process id="Process_OrderManagement" name="Central Order Management" isExecutable="true">
+
+    <bpmn:startEvent id="Start_OM_OrderNeed" name="Order Need Received">
+      <bpmn:messageEventDefinition messageRef="Message_OrderNeed" />
+      <bpmn:outgoing>Flow_OM_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="ServiceTask_OM_LogRequest" name="Log Order Request">
+      <bpmn:incoming>Flow_OM_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_OM_Urgent" name="Urgent?">
+      <bpmn:incoming>Flow_OM_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_UrgentYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OM_UrgentNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="ServiceTask_OM_CreateImmediateOrder" name="Create Immediate Order">
+      <bpmn:incoming>Flow_OM_UrgentYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_ImmediateToSend</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="ServiceTask_OM_QueueForBulk" name="Queue for Bulk Order">
+      <bpmn:incoming>Flow_OM_UrgentNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_QueueToThresholdWait</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_OM_ThresholdReached" name="Threshold Reached">
+      <bpmn:incoming>Flow_OM_QueueToThresholdWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_ThresholdToBulk</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${bulkThresholdReached}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="ServiceTask_OM_CreateBulkOrder" name="Create Bulk Order">
+      <bpmn:incoming>Flow_OM_ThresholdToBulk</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_BulkToSend</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="ServiceTask_OM_SendToSupplier" name="Send Order to Supplier">
+      <bpmn:incoming>Flow_OM_ImmediateToSend</bpmn:incoming>
+      <bpmn:incoming>Flow_OM_BulkToSend</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_SendToWait</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_OM_SupplierConfirmation" name="Supplier Confirmation">
+      <bpmn:incoming>Flow_OM_SendToWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_SupplierToUpdate</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_SupplierConfirmation" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="ServiceTask_OM_UpdateStatus" name="Update Order Status">
+      <bpmn:incoming>Flow_OM_SupplierToUpdate</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_ToThrowCompleted</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateThrowEvent id="ThrowEvent_OM_OrderCompleted" name="Notify Units: Order Completed">
+      <bpmn:incoming>Flow_OM_ToThrowCompleted</bpmn:incoming>
+      <bpmn:outgoing>Flow_OM_CompletedToEnd</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_OrderCompleted" />
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:endEvent id="End_OM" name="Order Managed">
+      <bpmn:incoming>Flow_OM_CompletedToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_OM_1" sourceRef="Start_OM_OrderNeed" targetRef="ServiceTask_OM_LogRequest" />
+    <bpmn:sequenceFlow id="Flow_OM_2" sourceRef="ServiceTask_OM_LogRequest" targetRef="Gateway_OM_Urgent" />
+    <bpmn:sequenceFlow id="Flow_OM_UrgentYes" name="Yes" sourceRef="Gateway_OM_Urgent" targetRef="ServiceTask_OM_CreateImmediateOrder" />
+    <bpmn:sequenceFlow id="Flow_OM_UrgentNo" name="No" sourceRef="Gateway_OM_Urgent" targetRef="ServiceTask_OM_QueueForBulk" />
+    <bpmn:sequenceFlow id="Flow_OM_ImmediateToSend" sourceRef="ServiceTask_OM_CreateImmediateOrder" targetRef="ServiceTask_OM_SendToSupplier" />
+    <bpmn:sequenceFlow id="Flow_OM_QueueToThresholdWait" sourceRef="ServiceTask_OM_QueueForBulk" targetRef="CatchEvent_OM_ThresholdReached" />
+    <bpmn:sequenceFlow id="Flow_OM_ThresholdToBulk" sourceRef="CatchEvent_OM_ThresholdReached" targetRef="ServiceTask_OM_CreateBulkOrder" />
+    <bpmn:sequenceFlow id="Flow_OM_BulkToSend" sourceRef="ServiceTask_OM_CreateBulkOrder" targetRef="ServiceTask_OM_SendToSupplier" />
+    <bpmn:sequenceFlow id="Flow_OM_SendToWait" sourceRef="ServiceTask_OM_SendToSupplier" targetRef="CatchEvent_OM_SupplierConfirmation" />
+    <bpmn:sequenceFlow id="Flow_OM_SupplierToUpdate" sourceRef="CatchEvent_OM_SupplierConfirmation" targetRef="ServiceTask_OM_UpdateStatus" />
+    <bpmn:sequenceFlow id="Flow_OM_ToThrowCompleted" sourceRef="ServiceTask_OM_UpdateStatus" targetRef="ThrowEvent_OM_OrderCompleted" />
+    <bpmn:sequenceFlow id="Flow_OM_CompletedToEnd" sourceRef="ThrowEvent_OM_OrderCompleted" targetRef="End_OM" />
+  </bpmn:process>
+
+  <!-- =================================================================== -->
+  <!-- Supplier System (Black Box)                                         -->
+  <!-- =================================================================== -->
+  <bpmn:process id="Process_Supplier" name="Supplier System" isExecutable="false">
+    <bpmn:intermediateCatchEvent id="CatchEvent_Supplier_PO" name="Receive Purchase Order">
+      <bpmn:messageEventDefinition messageRef="Message_PurchaseOrder" />
+      <bpmn:outgoing>Flow_Supplier_1</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="ServiceTask_Supplier_Process" name="Process & Ship Order">
+      <bpmn:incoming>Flow_Supplier_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Supplier_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateThrowEvent id="ThrowEvent_Supplier_Confirmation" name="Send Confirmation">
+      <bpmn:incoming>Flow_Supplier_2</bpmn:incoming>
+      <bpmn:messageEventDefinition messageRef="Message_SupplierConfirmation" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="Flow_Supplier_1" sourceRef="CatchEvent_Supplier_PO" targetRef="ServiceTask_Supplier_Process" />
+    <bpmn:sequenceFlow id="Flow_Supplier_2" sourceRef="ServiceTask_Supplier_Process" targetRef="ThrowEvent_Supplier_Confirmation" />
+  </bpmn:process>
+
+  <!-- =================================================================== -->
+  <!-- Other Department (Transfers)                                        -->
+  <!-- =================================================================== -->
+  <bpmn:process id="Process_OtherDept" name="Other Department (Transfer Handling)" isExecutable="false">
+    <bpmn:intermediateCatchEvent id="CatchEvent_OtherDept_TransferRequest" name="Receive Transfer Request">
+      <bpmn:messageEventDefinition messageRef="Message_TransferRequest" />
+      <bpmn:outgoing>Flow_OtherDept_1</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_OtherDept_PickAndSend" name="Pick & Send Medication">
+      <bpmn:incoming>Flow_OtherDept_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_OtherDept_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateThrowEvent id="ThrowEvent_OtherDept_TransferDelivered" name="Notify Transfer Delivered">
+      <bpmn:incoming>Flow_OtherDept_2</bpmn:incoming>
+      <bpmn:messageEventDefinition messageRef="Message_TransferDelivered" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="Flow_OtherDept_1" sourceRef="CatchEvent_OtherDept_TransferRequest" targetRef="Task_OtherDept_PickAndSend" />
+    <bpmn:sequenceFlow id="Flow_OtherDept_2" sourceRef="Task_OtherDept_PickAndSend" targetRef="ThrowEvent_OtherDept_TransferDelivered" />
+  </bpmn:process>
+
+  <!-- =================================================================== -->
+  <!-- BPMN Diagram with Color Highlights                                  -->
+  <!-- =================================================================== -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_MedStock">
+    <bpmndi:BPMNPlane id="BPMNPlane_MedStock" bpmnElement="Collaboration_MedicationStock">
+
+      <!-- ===================== Pools ===================== -->
+      <bpmndi:BPMNShape id="Participant_Preoperative_di" bpmnElement="Participant_Preoperative" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="1200" height="220" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Participant_Postoperative_di" bpmnElement="Participant_Postoperative" isHorizontal="true">
+        <dc:Bounds x="150" y="320" width="1200" height="260" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Participant_OrderMgmt_di" bpmnElement="Participant_OrderMgmt" isHorizontal="true">
+        <dc:Bounds x="150" y="610" width="1200" height="220" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Participant_Supplier_di" bpmnElement="Participant_Supplier" isHorizontal="true">
+        <dc:Bounds x="150" y="860" width="600" height="160" bioc:fill="#f8d7da" bioc:stroke="#842029" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Participant_OtherDept_di" bpmnElement="Participant_OtherDept" isHorizontal="true">
+        <dc:Bounds x="800" y="860" width="550" height="160" />
+      </bpmndi:BPMNShape>
+
+      <!-- ===================== Preoperative ===================== -->
+
+      <bpmndi:BPMNShape id="Start_Preop_MedNeeded_di" bpmnElement="Start_Preop_MedNeeded">
+        <dc:Bounds x="190" y="150" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Preop_QueryChecklist_di" bpmnElement="Task_Preop_QueryChecklist" bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="260" y="130" width="120" height="60" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Preop_CheckStock_di" bpmnElement="Task_Preop_CheckStock" bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="420" y="130" width="150" height="60" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Preop_StockAvailable_di" bpmnElement="Gateway_Preop_StockAvailable"
+                        isMarkerVisible="true" bioc:fill="#ffe5d4" bioc:stroke="#d9480f">
+        <dc:Bounds x="620" y="135" width="40" height="40" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Preop_PickFromStorage_di" bpmnElement="Task_Preop_PickFromStorage"
+                        bioc:fill="#fff3cd" bioc:stroke="#856404">
+        <dc:Bounds x="700" y="130" width="140" height="60" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Preop_AvailableOtherDept_di" bpmnElement="Gateway_Preop_AvailableOtherDept"
+                        isMarkerVisible="true" bioc:fill="#ffe5d4" bioc:stroke="#d9480f">
+        <dc:Bounds x="620" y="200" width="40" height="40" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="SendTask_Preop_RequestTransfer_di" bpmnElement="SendTask_Preop_RequestTransfer"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="700" y="190" width="160" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CatchEvent_Preop_TransferDelivered_di" bpmnElement="CatchEvent_Preop_TransferDelivered"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="890" y="195" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Preop_UpdateAfterTransfer_di" bpmnElement="Task_Preop_UpdateAfterTransfer"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="960" y="185" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="SendTask_Preop_SendOrderNeed_di" bpmnElement="SendTask_Preop_SendOrderNeed"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="700" y="250" width="160" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CatchEvent_Preop_OrderCompleted_di" bpmnElement="CatchEvent_Preop_OrderCompleted"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="890" y="255" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Preop_UpdateAfterOrder_di" bpmnElement="Task_Preop_UpdateAfterOrder"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="960" y="245" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_Preop_Ready_di" bpmnElement="End_Preop_Ready">
+        <dc:Bounds x="880" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- Preop sequence flows -->
+      <bpmndi:BPMNEdge id="Flow_Preop_1_di" bpmnElement="Flow_Preop_1">
+        <di:waypoint x="226" y="168" />
+        <di:waypoint x="260" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_2_di" bpmnElement="Flow_Preop_2">
+        <di:waypoint x="380" y="160" />
+        <di:waypoint x="420" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_3_di" bpmnElement="Flow_Preop_3">
+        <di:waypoint x="570" y="160" />
+        <di:waypoint x="620" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_YesStock_di" bpmnElement="Flow_Preop_YesStock">
+        <di:waypoint x="660" y="155" />
+        <di:waypoint x="700" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_NoStock_di" bpmnElement="Flow_Preop_NoStock">
+        <di:waypoint x="640" y="175" />
+        <di:waypoint x="640" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_AvailOtherYes_di" bpmnElement="Flow_Preop_AvailOtherYes">
+        <di:waypoint x="660" y="220" />
+        <di:waypoint x="700" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_AvailOtherNo_di" bpmnElement="Flow_Preop_AvailOtherNo">
+        <di:waypoint x="640" y="240" />
+        <di:waypoint x="640" y="275" />
+        <di:waypoint x="700" y="275" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_ToTransferWait_di" bpmnElement="Flow_Preop_ToTransferWait">
+        <di:waypoint x="860" y="215" />
+        <di:waypoint x="890" y="213" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_TransferDeliveredToUpdate_di" bpmnElement="Flow_Preop_TransferDeliveredToUpdate">
+        <di:waypoint x="926" y="213" />
+        <di:waypoint x="960" y="213" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_UpdateTransferToPick_di" bpmnElement="Flow_Preop_UpdateTransferToPick">
+        <di:waypoint x="1110" y="213" />
+        <di:waypoint x="770" y="190" />
+        <di:waypoint x="770" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_ToOrderWait_di" bpmnElement="Flow_Preop_ToOrderWait">
+        <di:waypoint x="860" y="275" />
+        <di:waypoint x="890" y="273" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_OrderCompletedToUpdate_di" bpmnElement="Flow_Preop_OrderCompletedToUpdate">
+        <di:waypoint x="926" y="273" />
+        <di:waypoint x="960" y="273" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_UpdateOrderToPick_di" bpmnElement="Flow_Preop_UpdateOrderToPick">
+        <di:waypoint x="1110" y="273" />
+        <di:waypoint x="770" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Preop_PickToEnd_di" bpmnElement="Flow_Preop_PickToEnd">
+        <di:waypoint x="840" y="160" />
+        <di:waypoint x="880" y="158" />
+      </bpmndi:BPMNEdge>
+
+      <!-- ===================== Postoperative (key elements) ===================== -->
+
+      <bpmndi:BPMNShape id="Start_Postop_OperationEnded_di" bpmnElement="Start_Postop_OperationEnded">
+        <dc:Bounds x="190" y="380" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Postop_ScanUsage_di" bpmnElement="Task_Postop_ScanUsage" bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="250" y="370" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Postop_ItemUsed_di" bpmnElement="Gateway_Postop_ItemUsed"
+                        isMarkerVisible="true" bioc:fill="#ffe5d4" bioc:stroke="#d9480f">
+        <dc:Bounds x="430" y="372" width="40" height="40" />
+      </bpmndi:BPMNShape>
+
+      <!-- (Add remaining Postop shapes/edges similarly if you want full visualization) -->
+
+      <!-- ===================== Order Management ===================== -->
+
+      <bpmndi:BPMNShape id="Start_OM_OrderNeed_di" bpmnElement="Start_OM_OrderNeed"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="190" y="660" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_OM_LogRequest_di" bpmnElement="ServiceTask_OM_LogRequest"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="250" y="650" width="140" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_OM_Urgent_di" bpmnElement="Gateway_OM_Urgent"
+                        isMarkerVisible="true" bioc:fill="#ffe5d4" bioc:stroke="#d9480f">
+        <dc:Bounds x="420" y="652" width="40" height="40" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_OM_CreateImmediateOrder_di" bpmnElement="ServiceTask_OM_CreateImmediateOrder"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="500" y="620" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_OM_QueueForBulk_di" bpmnElement="ServiceTask_OM_QueueForBulk"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="500" y="700" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CatchEvent_OM_ThresholdReached_di" bpmnElement="CatchEvent_OM_ThresholdReached"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="680" y="708" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_OM_CreateBulkOrder_di" bpmnElement="ServiceTask_OM_CreateBulkOrder"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="740" y="700" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_OM_SendToSupplier_di" bpmnElement="ServiceTask_OM_SendToSupplier"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="920" y="650" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CatchEvent_OM_SupplierConfirmation_di" bpmnElement="CatchEvent_OM_SupplierConfirmation"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="1100" y="660" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_OM_UpdateStatus_di" bpmnElement="ServiceTask_OM_UpdateStatus"
+                        bioc:fill="#cfe2ff" bioc:stroke="#084298">
+        <dc:Bounds x="1160" y="650" width="150" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ThrowEvent_OM_OrderCompleted_di" bpmnElement="ThrowEvent_OM_OrderCompleted"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="1340" y="660" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_OM_di" bpmnElement="End_OM">
+        <dc:Bounds x="1400" y="660" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- OM sequence flows (core ones) -->
+      <bpmndi:BPMNEdge id="Flow_OM_1_di" bpmnElement="Flow_OM_1">
+        <di:waypoint x="226" y="678" />
+        <di:waypoint x="250" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OM_2_di" bpmnElement="Flow_OM_2">
+        <di:waypoint x="390" y="678" />
+        <di:waypoint x="420" y="672" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OM_UrgentYes_di" bpmnElement="Flow_OM_UrgentYes">
+        <di:waypoint x="460" y="672" />
+        <di:waypoint x="500" y="648" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OM_UrgentNo_di" bpmnElement="Flow_OM_UrgentNo">
+        <di:waypoint x="440" y="692" />
+        <di:waypoint x="500" y="728" />
+      </bpmndi:BPMNEdge>
+      <!-- (you can add remaining OM edges similarly as needed) -->
+
+      <!-- ===================== Supplier (external) ===================== -->
+
+      <bpmndi:BPMNShape id="CatchEvent_Supplier_PO_di" bpmnElement="CatchEvent_Supplier_PO"
+                        bioc:fill="#f8d7da" bioc:stroke="#842029">
+        <dc:Bounds x="190" y="900" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ServiceTask_Supplier_Process_di" bpmnElement="ServiceTask_Supplier_Process"
+                        bioc:fill="#f8d7da" bioc:stroke="#842029">
+        <dc:Bounds x="250" y="890" width="140" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ThrowEvent_Supplier_Confirmation_di" bpmnElement="ThrowEvent_Supplier_Confirmation"
+                        bioc:fill="#f8d7da" bioc:stroke="#842029">
+        <dc:Bounds x="420" y="900" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- ===================== Other Department (transfer) ===================== -->
+
+      <bpmndi:BPMNShape id="CatchEvent_OtherDept_TransferRequest_di" bpmnElement="CatchEvent_OtherDept_TransferRequest"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="840" y="900" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_OtherDept_PickAndSend_di" bpmnElement="Task_OtherDept_PickAndSend"
+                        bioc:fill="#fff3cd" bioc:stroke="#856404">
+        <dc:Bounds x="900" y="890" width="140" height="56" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ThrowEvent_OtherDept_TransferDelivered_di"
+                        bpmnElement="ThrowEvent_OtherDept_TransferDelivered"
+                        bioc:fill="#d1e7dd" bioc:stroke="#0f5132">
+        <dc:Bounds x="1070" y="900" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <!-- ===================== Message Flow Edges (core) ===================== -->
+
+      <bpmndi:BPMNEdge id="Flow_Preop_OrderNeed_di" bpmnElement="Flow_Preop_OrderNeed">
+        <di:waypoint x="860" y="275" />
+        <di:waypoint x="860" y="678" />
+        <di:waypoint x="190" y="678" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Postop_OrderNeed_di" bpmnElement="Flow_Postop_OrderNeed">
+        <!-- Example routing from Postop sendTask (when added) to Start_OM_OrderNeed -->
+        <di:waypoint x="500" y="520" />
+        <di:waypoint x="500" y="678" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_OM_To_Preop_OrderCompleted_di" bpmnElement="Flow_OM_To_Preop_OrderCompleted">
+        <di:waypoint x="1376" y="678" />
+        <di:waypoint x="1376" y="273" />
+        <di:waypoint x="926" y="273" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_OM_To_Postop_OrderCompleted_di" bpmnElement="Flow_OM_To_Postop_OrderCompleted">
+        <di:waypoint x="1376" y="678" />
+        <di:waypoint x="1376" y="420" />
+        <di:waypoint x="400" y="420" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_OM_To_Supplier_PO_di" bpmnElement="Flow_OM_To_Supplier_PO">
+        <di:waypoint x="1070" y="678" />
+        <di:waypoint x="1070" y="918" />
+        <di:waypoint x="226" y="918" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Supplier_To_OM_Confirmation_di" bpmnElement="Flow_Supplier_To_OM_Confirmation">
+        <di:waypoint x="456" y="918" />
+        <di:waypoint x="456" y="678" />
+        <di:waypoint x="1100" y="678" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Preop_To_OtherDept_TransferReq_di" bpmnElement="Flow_Preop_To_OtherDept_TransferReq">
+        <di:waypoint x="860" y="215" />
+        <di:waypoint x="860" y="918" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_OtherDept_To_Preop_TransferDelivered_di" bpmnElement="Flow_OtherDept_To_Preop_TransferDelivered">
+        <di:waypoint x="1106" y="918" />
+        <di:waypoint x="1106" y="213" />
+        <di:waypoint x="890" y="213" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+
+</bpmn:definitions>
