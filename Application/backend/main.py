@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Application.backend.routers import health, medications, inventories, orders, carts, cart_items
+from Application.backend.routers import health, medications, inventories, orders, carts, cart_items, checklists
 from Application.backend.core.database import init_db
 
 
@@ -32,6 +32,7 @@ app.include_router(inventories.router)
 app.include_router(orders.router)
 app.include_router(carts.router)
 app.include_router(cart_items.router)
+app.include_router(checklists.router)
 
 
 if __name__ == "__main__":

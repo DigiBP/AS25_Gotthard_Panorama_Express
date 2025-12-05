@@ -52,10 +52,10 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useCartsStore } from '../stores/carts'
-import { useMedicationsStore } from '../stores/medications'
-import { useOrdersStore } from '../stores/orders'
-import { useUserSessionStore } from '../stores/user_session'
+import { useCartsStore } from '../stores/carts.js'
+import { useMedicationsStore } from '../stores/medications.js'
+import { useOrdersStore } from '../stores/orders.js'
+import { useUserSessionStore } from '../stores/user_session.js'
 
 // local reactive rows for ordering multiple medicines
 const rows = ref([
