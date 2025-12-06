@@ -15,3 +15,7 @@ async def evaluate_checklist(
     session: AsyncSession = Depends(get_session)
 ):
     return await process_checklist(items, session)
+
+@router.post("/create" )
+async def create_checklist_item():
+    return  200

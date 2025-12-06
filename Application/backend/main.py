@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from Application.backend.routers import health, medications, inventories, orders, carts, cart_items, checklists
 from Application.backend.core.database import init_db
+import httpx
 
 
 @asynccontextmanager
@@ -33,6 +34,13 @@ app.include_router(orders.router)
 app.include_router(carts.router)
 app.include_router(cart_items.router)
 app.include_router(checklists.router)
+
+
+@app.post("/start_flow")
+async def start_flow():
+    async with httpx.AsyncClient() as client:
+        response = await client.post("http://localhost:5678/webhook-test/04ced486-2466-431f-b1fd-ea604848459b")
+        return {"status": response.status_code, "response": response.text}
 
 
 if __name__ == "__main__":
