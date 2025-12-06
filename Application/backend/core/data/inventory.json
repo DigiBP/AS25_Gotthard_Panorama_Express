@@ -5,7 +5,8 @@
     "amount": 5,
     "unit": "mL",
     "location": "Fridge A3",
-    "expirationDate": "2028-12-29"
+    "expirationDate": "2028-12-29",
+    "min_stock": 2
   },
   {
     "medicationId": "opioid-001",
@@ -13,7 +14,8 @@
     "amount": 10,
     "unit": "mL",
     "location": "Specialbox Opioids",
-    "expirationDate": "2027-05-12"
+    "expirationDate": "2027-05-12",
+     "min_stock": 5
   },
   {
     "medicationId": "opioid-002",
@@ -21,7 +23,8 @@
     "amount": 1,
     "unit": "vial",
     "location": "Specialbox Opioids",
-    "expirationDate": "2027-05-12"
+    "expirationDate": "2027-05-12",
+     "min_stock": 5
   },
   {
     "medicationId": "antibiotic-001",
@@ -29,7 +32,8 @@
     "amount": 1,
     "unit": "vial",
     "location": "Cabinet B2",
-    "expirationDate": "2028-03-08"
+    "expirationDate": "2028-03-08",
+    "min_stock": 3
   },
   {
     "medicationId": "local_anesthetic-001",
@@ -37,7 +41,8 @@
     "amount": 5,
     "unit": "mL",
     "location": "Cabinet A1",
-    "expirationDate": "2027-10-21"
+    "expirationDate": "2027-10-21",
+    "min_stock": 4
   },
   {
     "medicationId": "analgesic-001",
@@ -45,7 +50,8 @@
     "amount": 100,
     "unit": "mL",
     "location": "Cabinet C4",
-    "expirationDate": "2028-11-30"
+    "expirationDate": "2028-11-30",
+    "min_stock": 20
   },
   {
     "medicationId": "antiemetic-001",
@@ -53,7 +59,8 @@
     "amount": 2,
     "unit": "mL",
     "location": "Cabinet D2",
-    "expirationDate": "2029-01-15"
+    "expirationDate": "2029-01-15",
+    "min_stock": 5
   },
   {
     "medicationId": "steroid-001",
@@ -61,7 +68,8 @@
     "amount": 1,
     "unit": "mL",
     "location": "Cabinet E1",
-    "expirationDate": "2028-07-19"
+    "expirationDate": "2028-07-19",
+    "min_stock": 8
   },
   {
     "medicationId": "anticoagulant-001",
@@ -69,7 +77,8 @@
     "amount": 10,
     "unit": "mL",
     "location": "Cabinet F3",
-    "expirationDate": "2027-09-25"
+    "expirationDate": "2027-09-25",
+    "min_stock": 15
   },
   {
     "medicationId": "vasoactive-001",
@@ -77,7 +86,8 @@
     "amount": 10,
     "unit": "mL",
     "location": "Cabinet G2",
-    "expirationDate": "2028-04-14"
+    "expirationDate": "2028-04-14",
+    "min_stock": 7
   },
   {
     "medicationId": "vasoactive-002",
@@ -85,7 +95,8 @@
     "amount": 5,
     "unit": "mL",
     "location": "Cabinet G4",
-    "expirationDate": "2029-02-28"
+    "expirationDate": "2029-02-28",
+    "min_stock": 7
   },
   {
     "medicationId": "anticholinergic-001",
@@ -93,7 +104,8 @@
     "amount": 1,
     "unit": "mL",
     "location": "Cabinet H1",
-    "expirationDate": "2028-06-30"
+    "expirationDate": "2028-06-30",
+    "min_stock": 4
   },
   {
     "medicationId": "antiinflammatory-001",
@@ -101,7 +113,8 @@
     "amount": 100,
     "unit": "mL",
     "location": "Cabinet C3",
-    "expirationDate": "2028-12-15"
+    "expirationDate": "2028-12-15",
+    "min_stock": 25
   },
   {
     "medicationId": "hypnotic-001",
@@ -109,7 +122,8 @@
     "amount": 50,
     "unit": "mL",
     "location": "Cabinet I2",
-    "expirationDate": "2027-11-20"
+    "expirationDate": "2027-11-20",
+    "min_stock": 10
   },
   {
     "medicationId": "hypnotic-002",
@@ -117,7 +131,8 @@
     "amount": 10,
     "unit": "mL",
     "location": "Specialbox Anesthetics",
-    "expirationDate": "2029-03-10"
+    "expirationDate": "2029-03-10",
+    "min_stock": 10
   },
   {
     "medicationId": "analgetic-001",
@@ -125,7 +140,8 @@
     "amount": 2,
     "unit": "mL",
     "location": "Cabinet C2",
-    "expirationDate": "2028-08-18"
+    "expirationDate": "2028-08-18",
+    "min_stock": 15
   },
   {
     "medicationId": "muscle_relaxant-001",
@@ -133,7 +149,8 @@
     "amount": 10,
     "unit": "mL",
     "location": "Cabinet J1",
-    "expirationDate": "2027-12-05"
+    "expirationDate": "2027-12-05",
+    "min_stock": 5
   },
   {
     "medicationId": "infusion-001",
@@ -141,7 +158,8 @@
     "amount": 1000,
     "unit": "mL",
     "location": "Cabinet K1",
-    "expirationDate": "2029-12-05"
+    "expirationDate": "2029-12-05",
+    "min_stock": 100
   },
   {
     "medicationId": "infusion-002",
@@ -149,6 +167,7 @@
     "amount": 250,
     "unit": "mL",
     "location": "Cabinet K2",
-    "expirationDate": "2029-12-05"
+    "expirationDate": "2029-12-05",
+    "min_stock": 50
   }
 ]

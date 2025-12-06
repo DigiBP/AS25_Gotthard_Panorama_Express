@@ -13,6 +13,7 @@ class Inventory(SQLModel, table=True):
     unit: str
     location: str
     expirationDate: date
+    min_stock: float
 
 
 class InventoryCreate(SQLModel):
@@ -22,6 +23,7 @@ class InventoryCreate(SQLModel):
     unit: str
     location: str
     expirationDate: date
+    min_stock: Optional[float] = None
 
 
 INVENTORY_POST_EXAMPLE = {
@@ -30,5 +32,6 @@ INVENTORY_POST_EXAMPLE = {
     "amount": 42,
     "unit": "mg",
     "location": "A1",
-    "expirationDate": "2025-12-31"
+    "expirationDate": "2025-12-31",
+    "min_stock": 10
 }
