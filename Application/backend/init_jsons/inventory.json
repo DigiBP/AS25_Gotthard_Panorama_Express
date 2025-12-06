@@ -1,0 +1,164 @@
+[
+    {
+        "id": 1,
+        "medicationId": "relaxant-001",
+        "batchNumber": "1189546",
+        "amount": 5.0,
+        "unit": "mL",
+        "location": "Fridge A3",
+        "expirationDate": "2028-12-29"
+    },
+    {
+        "id": 2,
+        "medicationId": "opioid-001",
+        "batchNumber": "AMX20230615",
+        "amount": 10.0,
+        "unit": "mL",
+        "location": "Specialbox Opioids",
+        "expirationDate": "2027-05-12"
+    },
+    {
+        "id": 3,
+        "medicationId": "opioid-002",
+        "batchNumber": "AMX20230616",
+        "amount": 1.0,
+        "unit": "vial",
+        "location": "Specialbox Opioids",
+        "expirationDate": "2027-05-12"
+    },
+    {
+        "id": 4,
+        "medicationId": "local_anesthetic-001",
+        "batchNumber": "MDG20231212",
+        "amount": 5.0,
+        "unit": "mL",
+        "location": "Cabinet A1",
+        "expirationDate": "2027-10-21"
+    },
+    {
+        "id": 5,
+        "medicationId": "vasoactive-001",
+        "batchNumber": "BBM20230722",
+        "amount": 10.0,
+        "unit": "mL",
+        "location": "Cabinet G2",
+        "expirationDate": "2028-04-14"
+    },
+    {
+        "id": 6,
+        "medicationId": "vasoactive-002",
+        "batchNumber": "HXL20240115",
+        "amount": 5.0,
+        "unit": "mL",
+        "location": "Cabinet G4",
+        "expirationDate": "2029-02-28"
+    },
+    {
+        "id": 7,
+        "medicationId": "hypnotic-001",
+        "batchNumber": "GLK20231201",
+        "amount": 50.0,
+        "unit": "mL",
+        "location": "Cabinet I2",
+        "expirationDate": "2027-11-20"
+    },
+    {
+        "id": 8,
+        "medicationId": "infusion-001",
+        "batchNumber": "ABB20221543",
+        "amount": 1000.0,
+        "unit": "mL",
+        "location": "Cabinet K1",
+        "expirationDate": "2029-12-05"
+    },
+    {
+        "id": 9,
+        "medicationId": "antibiotic-004",
+        "batchNumber": "MSD20230220",
+        "amount": 1.0,
+        "unit": "vial",
+        "location": "ICU Cabinet R4",
+        "expirationDate": "2028-03-08"
+    },
+    {
+        "id": 10,
+        "medicationId": "infusion-002",
+        "batchNumber": "ABB20231677",
+        "amount": 10.0,
+        "unit": "mL",
+        "location": "ED Cabinet L4",
+        "expirationDate": "2026-11-05"
+    },
+    {
+        "id": 11,
+        "medicationId": "analgesic-001",
+        "batchNumber": "BBM20230601",
+        "amount": 100.0,
+        "unit": "mL",
+        "location": "Cabinet B1",
+        "expirationDate": "2029-06-15"
+    },
+    {
+        "id": 12,
+        "medicationId": "analgesic-002",
+        "batchNumber": "CSP20230715",
+        "amount": 100.0,
+        "unit": "mL",
+        "location": "Cabinet B3",
+        "expirationDate": "2028-09-30"
+    },
+    {
+        "id": 13,
+        "medicationId": "hypnotic-002",
+        "batchNumber": "RPH20240225",
+        "amount": 10.0,
+        "unit": "mL",
+        "location": "Specialbox Anesthetics",
+        "expirationDate": "2029-03-10"
+    },
+    {
+        "id": 14,
+        "medicationId": "analgetic-001",
+        "batchNumber": "JNC20231020",
+        "amount": 2.0,
+        "unit": "mL",
+        "location": "Cabinet C2",
+        "expirationDate": "2028-08-18"
+    },
+    {
+        "id": 15,
+        "medicationId": "antibiotic-006",
+        "batchNumber": "CZG20230331",
+        "amount": 1.0,
+        "unit": "vial",
+        "location": "Cabinet B7",
+        "expirationDate": "2028-03-10"
+    },
+    {
+        "id": 16,
+        "medicationId": "antiemetic-001",
+        "batchNumber": "MDP20240220",
+        "amount": 2.0,
+        "unit": "mL",
+        "location": "Cabinet D2",
+        "expirationDate": "2029-01-15"
+    },
+    {
+        "id": 17,
+        "medicationId": "steroid-001",
+        "batchNumber": "HPA20230630",
+        "amount": 1.0,
+        "unit": "mL",
+        "location": "Cabinet E1",
+        "expirationDate": "2028-07-19"
+    },
+    {
+        "id": 18,
+        "medicationId": "infusion-003",
+        "batchNumber": "ABB20221673",
+        "amount": 100.0,
+        "unit": "mL",
+        "location": "Cabinet K2",
+        "expirationDate": "2029-12-05"
+    }
+]

@@ -173,3 +173,4 @@ Application/frontend/.vscode/
 
 # End of file
 
+localhost:5432.session.sql
