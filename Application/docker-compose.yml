@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gotthard_user
+      POSTGRES_PASSWORD: panorama_password
+      POSTGRES_DB: express_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n_database
+      - DB_POSTGRESDB_USER=gotthard_user
+      - DB_POSTGRESDB_PASSWORD=panorama_password
+
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_JWT_SECRET=replace_with_random_secret
+      - GENERIC_ENABLE_HARDENING=true
+    volumes:
+      - n8n-data:/home/node/.n8n
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+  n8n-data:
