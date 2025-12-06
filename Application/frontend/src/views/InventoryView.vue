@@ -109,8 +109,8 @@
 </template>
 
 <script>
-import { useCartsStore } from '../stores/carts';
-import { useMedicationsStore } from '../stores/medications';
+import { useCartsStore } from '../stores/carts.js';
+import { useMedicationsStore } from '../stores/medications.js';
 
 export default {
     name: 'InventoryView',

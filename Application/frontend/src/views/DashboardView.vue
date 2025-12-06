@@ -45,7 +45,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useOrdersStore } from '../stores/orders'
+import { useOrdersStore } from '../stores/orders.js'
 
 const ordersStore = useOrdersStore()
 

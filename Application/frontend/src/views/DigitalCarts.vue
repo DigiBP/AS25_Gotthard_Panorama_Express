@@ -11,7 +11,7 @@
 <script>
 import { computed } from 'vue';
 import Cart from '../components/Cart.vue';
-import { useCartsStore } from '../stores/carts';
+import { useCartsStore } from '../stores/carts.js';
 
 export default {
     name: 'DigitalCartsView',
