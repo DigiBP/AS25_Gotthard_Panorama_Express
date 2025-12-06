@@ -27,7 +27,7 @@
 </template>
 
 <script>
-import { useUserSessionStore } from '../stores/user_session';
+import { useUserSessionStore } from '../stores/user_session.js';
 
 export default {
     name: 'Navigation',

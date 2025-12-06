@@ -4,7 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "postgresql+asyncpg://gotthard_user:panorama_password@localhost:5432/express_database"
+DATABASE_URL = "postgresql+asyncpg://gotthard_user:panorama_password@localhost:5433/express_database"
 
 engine: AsyncEngine = create_async_engine(DATABASE_URL, echo=True, future=True)
 
