@@ -3,78 +3,78 @@
     "checked": false,
     "name": "Lidocaine",
     "location": "Cabinet A1",
-    "amount_mL": 5
+    "amount": 5
   },
   {
     "checked": false,
     "name": "Propofol",
     "location": "Cabinet I2",
-    "amount_mL": 50
+    "amount": 50
   },
   {
     "checked": false,
     "name": "Fentanyl",
     "location": "Specialbox Opioids",
-    "amount_mL": 10
+    "amount": 10
   },
   {
     "checked": false,
     "name": "Remifentanil",
     "location": "Specialbox Opioids",
-    "amount_mL": 50
+    "amount": 50
   },
   {
     "checked": false,
     "name": "Rocuronium",
     "location": "Fridge A3",
-    "amount_mL": 5
+    "amount": 5
   },
   {
     "checked": false,
     "name": "Ephedrin",
     "location": "Cabinet G2",
-    "amount_mL": 10
+    "amount": 10
   },
   {
     "checked": false,
-    "name": "Phenylephrin",
+    "name": "Phenylephrine",
     "location": "Cabinet G4",
-    "amount_mL": 10
+    "amount": 10
   },
   {
     "checked": false,
     "name": "Ringer Acetate",
     "location": "Cabinet K1",
-    "amount_mL": 1000
+    "amount": 1000
   },
   {
     "checked": false,
     "name": "Dexamethasone",
     "location": "Cabinet E1",
-    "amount_mL": 1
+    "amount": 1
   },
   {
     "checked": false,
     "name": "Novalgin",
     "location": "Cabinet C2",
-    "amount_mL": 2
+    "amount": 2
   },
   {
     "checked": false,
     "name": "Ondansetron",
     "location": "Cabinet D2",
-    "amount_mL": 2
+    "amount": 2
   },
   {
     "checked": false,
     "name": "NaCl",
     "location": "Cabinet K2",
-    "amount_mL": 200
+    "amount": 200
   },
   {
     "checked": false,
     "name": "Cefuroxim",
     "location": "Cabinet B2",
-    "amount_mL": 0
+    "amount": 0
   }
 ]

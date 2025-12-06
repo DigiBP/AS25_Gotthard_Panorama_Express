@@ -1,0 +1,154 @@
+[
+  {
+    "medicationId": "relaxant-001",
+    "batchNumber": "1189546",
+    "amount": 5,
+    "unit": "mL",
+    "location": "Fridge A3",
+    "expirationDate": "2028-12-29"
+  },
+  {
+    "medicationId": "opioid-001",
+    "batchNumber": "AMX20230615",
+    "amount": 10,
+    "unit": "mL",
+    "location": "Specialbox Opioids",
+    "expirationDate": "2027-05-12"
+  },
+  {
+    "medicationId": "opioid-002",
+    "batchNumber": "AMX20230616",
+    "amount": 1,
+    "unit": "vial",
+    "location": "Specialbox Opioids",
+    "expirationDate": "2027-05-12"
+  },
+  {
+    "medicationId": "antibiotic-001",
+    "batchNumber": "CZG20240101",
+    "amount": 1,
+    "unit": "vial",
+    "location": "Cabinet B2",
+    "expirationDate": "2028-03-08"
+  },
+  {
+    "medicationId": "local_anesthetic-001",
+    "batchNumber": "MDG20231212",
+    "amount": 5,
+    "unit": "mL",
+    "location": "Cabinet A1",
+    "expirationDate": "2027-10-21"
+  },
+  {
+    "medicationId": "analgesic-001",
+    "batchNumber": "STDA20231010",
+    "amount": 100,
+    "unit": "mL",
+    "location": "Cabinet C4",
+    "expirationDate": "2028-11-30"
+  },
+  {
+    "medicationId": "antiemetic-001",
+    "batchNumber": "MDP20240220",
+    "amount": 2,
+    "unit": "mL",
+    "location": "Cabinet D2",
+    "expirationDate": "2029-01-15"
+  },
+  {
+    "medicationId": "steroid-001",
+    "batchNumber": "HPA20230630",
+    "amount": 1,
+    "unit": "mL",
+    "location": "Cabinet E1",
+    "expirationDate": "2028-07-19"
+  },
+  {
+    "medicationId": "anticoagulant-001",
+    "batchNumber": "RPH20230815",
+    "amount": 10,
+    "unit": "mL",
+    "location": "Cabinet F3",
+    "expirationDate": "2027-09-25"
+  },
+  {
+    "medicationId": "vasoactive-001",
+    "batchNumber": "BBM20230722",
+    "amount": 10,
+    "unit": "mL",
+    "location": "Cabinet G2",
+    "expirationDate": "2028-04-14"
+  },
+  {
+    "medicationId": "vasoactive-002",
+    "batchNumber": "HXL20240115",
+    "amount": 5,
+    "unit": "mL",
+    "location": "Cabinet G4",
+    "expirationDate": "2029-02-28"
+  },
+  {
+    "medicationId": "anticholinergic-001",
+    "batchNumber": "MDP20230910",
+    "amount": 1,
+    "unit": "mL",
+    "location": "Cabinet H1",
+    "expirationDate": "2028-06-30"
+  },
+  {
+    "medicationId": "antiinflammatory-001",
+    "batchNumber": "CSP20231005",
+    "amount": 100,
+    "unit": "mL",
+    "location": "Cabinet C3",
+    "expirationDate": "2028-12-15"
+  },
+  {
+    "medicationId": "hypnotic-001",
+    "batchNumber": "GLK20231201",
+    "amount": 50,
+    "unit": "mL",
+    "location": "Cabinet I2",
+    "expirationDate": "2027-11-20"
+  },
+  {
+    "medicationId": "hypnotic-002",
+    "batchNumber": "RPH20240225",
+    "amount": 10,
+    "unit": "mL",
+    "location": "Specialbox Anesthetics",
+    "expirationDate": "2029-03-10"
+  },
+  {
+    "medicationId": "analgetic-001",
+    "batchNumber": "JNC20231020",
+    "amount": 2,
+    "unit": "mL",
+    "location": "Cabinet C2",
+    "expirationDate": "2028-08-18"
+  },
+  {
+    "medicationId": "muscle_relaxant-001",
+    "batchNumber": "ABB20231115",
+    "amount": 10,
+    "unit": "mL",
+    "location": "Cabinet J1",
+    "expirationDate": "2027-12-05"
+  },
+  {
+    "medicationId": "infusion-001",
+    "batchNumber": "ABB20221543",
+    "amount": 1000,
+    "unit": "mL",
+    "location": "Cabinet K1",
+    "expirationDate": "2029-12-05"
+  },
+  {
+    "medicationId": "infusion-002",
+    "batchNumber": "ABB20221673",
+    "amount": 250,
+    "unit": "mL",
+    "location": "Cabinet K2",
+    "expirationDate": "2029-12-05"
+  }
+]
