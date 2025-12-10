@@ -13,6 +13,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true, // Enable WebSocket proxying
+        rewrite: (path) => path.replace(/^\/api/, '') // Optional: Strip /api prefix if backend routes don't have it
       }
     }
   },
