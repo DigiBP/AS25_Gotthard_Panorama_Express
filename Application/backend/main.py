@@ -16,6 +16,7 @@ from Application.backend.routers import (
     health,
     inventories,
     medications,
+    notifications,
     orders,
 )
 
@@ -53,6 +54,7 @@ api_router.include_router(orders.router)
 api_router.include_router(carts.router)
 api_router.include_router(cart_items.router)
 api_router.include_router(checklists.router)
+api_router.include_router(notifications.router)
 
 # 3. Include the Master router into the App
 app.include_router(api_router)
