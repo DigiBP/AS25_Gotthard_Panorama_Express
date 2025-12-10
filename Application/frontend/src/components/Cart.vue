@@ -112,6 +112,12 @@ const meds = computed(() => {
     align-items: center
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .cart-header .status {
     font-size: 12px;
     color: #666
@@ -120,23 +126,6 @@ const meds = computed(() => {
 .cart-body .med {
     font-size: 13px;
     color: #333
-}
-
-.cart-card {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
-    padding: 12px;
-    background: white;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.cart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center
 }
 
 .cart-header .status {

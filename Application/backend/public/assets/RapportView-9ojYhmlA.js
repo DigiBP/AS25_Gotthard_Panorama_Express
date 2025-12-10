@@ -1,0 +1,1 @@
+import{_ as o,a as t,b as a,o as s}from"./index-x6LvLTz9.js";const p={class:"view rapport-view"},r={__name:"RapportView",setup(_){return(l,e)=>(s(),t("div",p,[...e[0]||(e[0]=[a("h1",null,"Reports & Analysis",-1),a("p",null,"Rapport view (placeholder).",-1)])]))}},c=o(r,[["__scopeId","data-v-5a689653"]]);export{c as default};
