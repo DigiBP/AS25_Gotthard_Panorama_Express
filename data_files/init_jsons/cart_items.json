@@ -1,0 +1,98 @@
+[
+  {
+    "cart_id": 1,
+    "inventory_id": 4,
+    "medication_id": "local_anesthetic-001",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 7,
+    "medication_id": "hypnotic-001",
+    "amount": 1.0,
+    "time_sensitive": true,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 2,
+    "medication_id": "opioid-001",
+    "amount": 1.0,
+    "time_sensitive": true,
+    "unit": "mcg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 3,
+    "medication_id": "opioid-002",
+    "amount": 1.0,
+    "time_sensitive": true,
+    "unit": "mcg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 6,
+    "medication_id": "vasoactive-002",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 5,
+    "medication_id": "vasoactive-001",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 14,
+    "medication_id": "analgetic-001",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 16,
+    "medication_id": "antiemetic-001",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 8,
+    "medication_id": "infusion-001",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "ml"
+  },
+  {
+    "cart_id": 1,
+    "inventory_id": 18,
+    "medication_id": "infusion-003",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "ml"
+  },
+  {
+    "cart_id": 2,
+    "inventory_id": 5,
+    "medication_id": "vasoactive-001",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  },
+  {
+    "cart_id": 2,
+    "inventory_id": 6,
+    "medication_id": "vasoactive-002",
+    "amount": 1.0,
+    "time_sensitive": false,
+    "unit": "mg"
+  }
+]

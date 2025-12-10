@@ -11,7 +11,6 @@ class CartItem(SQLModel, table=True):
     cart_id: int = Field(foreign_key="carts.id")
     inventory_id: int = Field(foreign_key="inventory.id")
 
-    # Now correctly points to Medication.medicationId
     medication_id: str = Field(foreign_key="medications.medicationId")
 
     time_sensitive: bool

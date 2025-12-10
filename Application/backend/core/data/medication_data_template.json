@@ -1,0 +1,192 @@
+[
+  {
+    "medicationId": "relaxant-001",
+    "name": "rocuronium",
+    "formula": "solution",
+    "producer": "Kohlpharma GmbH",
+    "dosage": "10 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "opioid-001",
+    "name": "fentanyl",
+    "formula": "solution",
+    "producer": "Sintetica Pharma GmbH",
+    "dosage": "50 mcg/ml",
+    "baseUnit": "mL",
+    "restrictionLevel": 1,
+    "chemicalStabilityHours": 28
+  },
+  {
+    "medicationId": "opioid-002",
+    "name": "remifentanil",
+    "formula": "powder for solution for injection",
+    "producer": "Fresenius Kabi Deutschland GmbH",
+    "dosage": "5 mg",
+    "baseUnit": "vial",
+    "restrictionLevel": 1,
+    "chemicalStabilityHours": 28
+  },
+  {
+    "medicationId": "antibiotic-001",
+    "name": "cefuroxim",
+    "formula": "powder for solution for injection",
+    "producer": "Zentiva Pharma GmbH",
+    "dosage": "1500 mg",
+    "baseUnit": "vial",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "local_anesthetic-001",
+    "name": "lidocaine",
+    "formula": "solution",
+    "producer": "Bichsel GmbH",
+    "dosage": "10 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "analgesic-001",
+    "name": "paracetamol",
+    "formula": "solution for infusion",
+    "producer": "STADA Arzneimittel AG",
+    "dosage": "10 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "antiemetic-001",
+    "name": "ondansetron",
+    "formula": "solution for injection",
+    "producer": "Labatec GmbH & Co. KG",
+    "dosage": "2 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "steroid-001",
+    "name": "dexamethasone",
+    "formula": "solution for injection",
+    "producer": "Haupt Pharma Amareg GmbH",
+    "dosage": "4 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "anticoagulant-001",
+    "name": "heparin",
+    "formula": "solution",
+    "producer": "Ratiopharm GmbH",
+    "dosage": "1000 IU/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "vasoactive-001",
+    "name": "ephedrin",
+    "formula": "solution for infusion",
+    "producer": "B. Braun Melsungen AG",
+    "dosage": "5 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "vasoactive-002",
+    "name": "phenylephrine",
+    "formula": "solution for injection",
+    "producer": "Hexal AG",
+    "dosage": "100 mcg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "anticholinergic-001",
+    "name": "atropine",
+    "formula": "solution for injection",
+    "producer": "Meda Pharma GmbH & Co. KG",
+    "dosage": "0.5 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "antiinflammatory-001",
+    "name": "ibuprofen",
+    "formula": "solution for infusion",
+    "producer": "CSPC Ouyi Pharmaceutical Co., Ltd.",
+    "dosage": "4 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "hypnotic-001",
+    "name": "propofol",
+    "formula": "solution for injection",
+    "producer": "Fresenius Kabi Deutschland GmbH",
+    "dosage": "10 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 6
+  },
+  {
+    "medicationId": "hypnotic-002",
+    "name": "ketamine",
+    "formula": "solution for injection",
+    "producer": "Ratiopharm GmbH",
+    "dosage": "10 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "analgetic-001",
+    "name": "novalgin",
+    "formula": "solution for injection",
+    "producer": "Janssen-Cilag GmbH",
+    "dosage": "500 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "muscle_relaxant-001",
+    "name": "succinylcholine",
+    "formula": "solution for injection",
+    "producer": "AbbVie Deutschland GmbH & Co. KG",
+    "dosage": "100 mg/mL",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 24
+  },
+  {
+    "medicationId": "infusion-001",
+    "name": "Ringer Acetate",
+    "formula": "solution for infusion",
+    "producer": "Fresenius Kabi",
+    "dosage": "",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 999999
+  },
+  {
+    "medicationId": "infusion-002",
+    "name": "NaCl",
+    "formula": "solution for infusion",
+    "producer": "Fresenius Kabi",
+    "dosage": "",
+    "baseUnit": "mL",
+    "restrictionLevel": 0,
+    "chemicalStabilityHours": 999679
+  }
+]

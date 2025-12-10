@@ -6,7 +6,6 @@ from datetime import date
 class Order(SQLModel, table=True):
     __tablename__ = "orders"
 
-    # Auto-Increment ID
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     name: str
     date: date

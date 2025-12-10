@@ -36,6 +36,12 @@ async def add_inventory(session: AsyncSession, inventory_data: InventoryCreate):
     return item
 
 
+async def get_inventory_by_medication(session: AsyncSession, medication_id: str) -> List[Inventory]:
+    """Return all inventory entries that belong to a given medication id."""
+    result = await session.exec(select(Inventory).where(Inventory.medicationId == medication_id))
+    return result.all()
+
+
 async def update_inventory_amount(session: AsyncSession, inventory_id: str, new_amount: float) -> Inventory:
     item = await get_inventory_by_id(session, inventory_id)
     if not item:
