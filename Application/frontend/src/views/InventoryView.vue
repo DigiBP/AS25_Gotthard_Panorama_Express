@@ -171,7 +171,7 @@ export default {
         },
         inventoryTotals() {
             const map = new Map()
-                ; (this.meds.medications || []).forEach((m) => {
+                ; (this.meds.inventory || []).forEach((m) => {
                     const name = m.name || 'unknown'
                     const unit = m.unit || ''
                     const key = `${name}::${unit}`

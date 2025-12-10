@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, Body
 from typing import List
+
+from fastapi import APIRouter, Body, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from Application.backend.core.database import get_session
-from Application.backend.models.medication import Medication, MedicationCreate, MEDICATION_EXAMPLE
-from Application.backend.services.medication_service import get_all_medications, create_medication
+from Application.backend.models.medication import (
+    MEDICATION_EXAMPLE,
+    Medication,
+    MedicationCreate,
+)
+from Application.backend.services.medication_service import (
+    create_medication,
+    get_all_medications,
+)
 
 router = APIRouter(prefix="/medications", tags=["Medications"])
 

@@ -1,7 +1,7 @@
-import { fileURLToPath, URL } from 'node:url'
+import { fileURLToPath, URL } from 'node:url';
 
-import vue from '@vitejs/plugin-vue'
-import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue';
+import { defineConfig } from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,15 +10,14 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/todos': {
+      '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => {
           console.log("Rewriting path:", path);
-          return path
-        },
-        methods: ['GET', 'POST', 'PUT', 'DELETE']
+          return path.replace(/^\/api/, '')
+        }
       }
     }
   },

@@ -25,7 +25,9 @@ async def add_cart(session: AsyncSession, cart_data: CartCreate):
     return cart_item
 
 
-async def update_cart_status(session: AsyncSession, cart_id: str, new_status: CartStatus) -> Cart:
+async def update_cart_status(
+    session: AsyncSession, cart_id: str, new_status: CartStatus
+) -> Cart:
     cart_item = await get_cart_by_id(session, cart_id)
     if not cart_item:
         raise HTTPException(status_code=404, detail=f"Cart '{cart_id}' not found")
@@ -34,3 +36,28 @@ async def update_cart_status(session: AsyncSession, cart_id: str, new_status: Ca
     await session.commit()
     await session.refresh(cart_item)
     return cart_item
+
+
+async def remove_cart(session: AsyncSession, cart_id: int) -> None:
+    from Application.backend.models.cart_item import CartItem
+
+    cart = await session.get(Cart, cart_id)
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+
+    # Delete all cart items first (and return amounts to inventory)
+    from Application.backend.models.inventory import Inventory
+
+    result = await session.exec(select(CartItem).where(CartItem.cart_id == cart_id))
+    cart_items = result.all()
+
+    for item in cart_items:
+        inventory = await session.get(Inventory, item.inventory_id)
+        if inventory:
+            inventory.amount += item.amount
+            session.add(inventory)
+        await session.delete(item)
+
+    # Delete the cart
+    await session.delete(cart)
+    await session.commit()

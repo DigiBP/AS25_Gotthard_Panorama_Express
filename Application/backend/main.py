@@ -1,10 +1,22 @@
 from contextlib import asynccontextmanager
+
+import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Application.backend.routers import health, medications, inventories, orders, carts, cart_items, checklists
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 from Application.backend.core.database import init_db
-import httpx
+from Application.backend.routers import (
+    cart_items,
+    carts,
+    checklists,
+    health,
+    inventories,
+    medications,
+    orders,
+)
 
 
 @asynccontextmanager
@@ -12,7 +24,9 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 origins = [
     "http://localhost:5173",  # Standard Vite/Vue port
@@ -39,7 +53,9 @@ app.include_router(checklists.router)
 @app.post("/start_flow")
 async def start_flow():
     async with httpx.AsyncClient() as client:
-        response = await client.post("http://localhost:5678/webhook-test/04ced486-2466-431f-b1fd-ea604848459b")
+        response = await client.post(
+            "http://localhost:5678/webhook-test/04ced486-2466-431f-b1fd-ea604848459b"
+        )
         return {"status": response.status_code, "response": response.text}
 
 

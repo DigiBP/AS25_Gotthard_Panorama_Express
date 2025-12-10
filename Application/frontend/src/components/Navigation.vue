@@ -13,6 +13,13 @@
             </router-link>
         </nav>
 
+        <div class="theme-toggle">
+            <button class="toggle" @click="toggleTheme" :aria-pressed="isDark" title="Toggle dark mode">
+                <span v-if="isDark">🌙 Dark</span>
+                <span v-else>☀️ Light</span>
+            </button>
+        </div>
+
         <!-- User area at the bottom -->
         <div class="user-area" :title="store && store.currentUser ? store.currentUser.name : 'Not signed in'">
             <div v-if="!collapsed" class="user-controls">
@@ -34,6 +41,7 @@ export default {
     data() {
         return {
             collapsed: false,
+            isDark: document.documentElement.getAttribute('data-theme') === 'dark',
             links: [
                 { name: 'dashboard', label: 'Dashboard', icon: '🏠' },
                 { name: 'orderCreation', label: 'Create Order', icon: '📝' },
@@ -50,11 +58,29 @@ export default {
     created() {
         this.store = useUserSessionStore()
         this.selectedId = this.store && this.store.currentUser ? this.store.currentUser.id : (this.store && this.store.mockUsers[0] && this.store.mockUsers[0].id) || ''
+        // Apply the current user's preferred theme if available
+        const pref = this.store?.currentUser?.preferences?.theme
+        if (pref) this.applyTheme(pref)
     },
     methods: {
         onSwitchUser() {
             if (!this.selectedId || !this.store) return
             this.store.switchUser(this.selectedId)
+            const pref = this.store?.currentUser?.preferences?.theme
+            if (pref) this.applyTheme(pref)
+        },
+        applyTheme(theme) {
+            const next = theme === 'dark' ? 'dark' : 'light'
+            document.documentElement.setAttribute('data-theme', next)
+            localStorage.setItem('theme', next)
+            this.isDark = next === 'dark'
+            if (this.store?.currentUser) {
+                this.store.updatePreferences({ theme: next })
+            }
+        },
+        toggleTheme() {
+            const next = this.isDark ? 'light' : 'dark'
+            this.applyTheme(next)
         }
     },
 }
@@ -129,6 +155,25 @@ export default {
     flex-direction: row;
     gap: 8px;
     align-items: center;
+}
+
+.theme-toggle {
+    padding: 0 12px 12px;
+}
+
+.theme-toggle .toggle {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.theme-toggle .toggle:hover {
+    background: color-mix(in srgb, var(--primary-200) 12%, transparent);
 }
 
 .user-controls {
