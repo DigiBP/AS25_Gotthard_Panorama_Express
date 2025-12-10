@@ -12,6 +12,7 @@ export default defineConfig({
         target: 'http://localhost:8000', // The backend address
         changeOrigin: true,
         secure: false,
+        ws: true, // Enable WebSocket proxying
       }
     }
   },
