@@ -41,7 +41,7 @@ This BPMN model describes the medication preparation and storage workflow (still
 | [X]   | Set up Database                               | Djordji           |        |
 | [X]   | Design Backend APIS                           | Djorgdi , Merel   |        |
 | [X]   | Setup frontend with mockup for main views     | Merel             | 99%    |
-| [ ]   | Finalize Dataelements in JSON                 | Donna & Viktorija |        |
+| [ ]   | Finalize Data elements in JSON                | Donna & Viktorija |        |
 | [ ]   | Update Projectplan and Summarize Developement | Janosh            |        |
 | [ ]   | Start Modeling Flow in Camunda / Langflow     | Janosh            |        |
 
