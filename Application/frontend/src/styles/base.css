@@ -96,7 +96,7 @@ body {
 /* Small card surface used by components */
 .card {
     background: var(--bg);
-    border: 1px solid rgba(15, 23, 42, 0.04);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: var(--space-3);
 }

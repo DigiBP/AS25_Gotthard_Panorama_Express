@@ -1,27 +1,22 @@
-import { fileURLToPath, URL } from 'node:url'
-
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    vue()
+    vue(),
   ],
   server: {
     proxy: {
-      '/todos': {
-        target: 'http://localhost:8000',
+      '/api': {
+        target: 'http://localhost:8000', // The backend address
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => {
-          console.log("Rewriting path:", path);
-          return path
-        },
-        methods: ['GET', 'POST', 'PUT', 'DELETE']
+        ws: true, // Enable WebSocket proxying
       }
     }
   },
+  base: '/front/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

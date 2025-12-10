@@ -4,6 +4,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from Application.backend.models.inventory import Inventory, InventoryCreate, INVENTORY_POST_EXAMPLE
 from Application.backend.services.inventory_service import get_all_inventory, add_inventory, update_inventory_amount, delete_inventory, delete_all_inventory
+from Application.backend.services.inventory_service import (
+    get_all_inventory,
+    get_inventory_by_medication,
+    add_inventory,
+    update_inventory_amount,
+    delete_inventory,
+    delete_all_inventory,
+)
 from Application.backend.core.database import get_session
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
@@ -13,6 +21,13 @@ router = APIRouter(prefix="/inventory", tags=["Inventory"])
 async def list_inventory(session: AsyncSession = Depends(get_session)):
     return await get_all_inventory(session)
 
+
+@router.get("/{medication_id}", response_model=List[Inventory])
+async def list_inventory_by_medication(medication_id: str, session: AsyncSession = Depends(get_session)):
+    """Return inventory entries filtered by medication id."""
+    return await get_inventory_by_medication(session, medication_id)
+
+    
 
 @router.post("/", response_model=Inventory)
 async def add_inventory_item(

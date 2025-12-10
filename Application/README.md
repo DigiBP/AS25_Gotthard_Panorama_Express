@@ -76,3 +76,9 @@ The Vite dev server runs by default on http://localhost:5173. The frontend is co
   - `npm run dev` (from `Application/frontend`)
 - Build frontend for production:
   - `npm run build`
+
+
+## Docker beginners 
+
+`docker compose up -d db`
+`docker compose up -d n8n`

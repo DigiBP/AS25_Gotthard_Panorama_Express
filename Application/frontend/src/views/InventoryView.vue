@@ -100,7 +100,7 @@
                 </label>
                 <button :disabled="invPage <= 1" @click="invPage = Math.max(1, invPage - 1)">Prev</button>
                 <span>Page {{ invPage }} of {{ Math.max(1, Math.ceil(inventoryFilteredSorted.length / invPageSize))
-                }}</span>
+                    }}</span>
                 <button :disabled="invPage * invPageSize >= inventoryFilteredSorted.length"
                     @click="invPage = invPage + 1">Next</button>
             </div>
@@ -109,8 +109,8 @@
 </template>
 
 <script>
-import { useCartsStore } from '../stores/carts';
-import { useMedicationsStore } from '../stores/medications';
+import { useCartsStore } from '../stores/carts.js';
+import { useMedicationsStore } from '../stores/medications.js';
 
 export default {
     name: 'InventoryView',
@@ -138,22 +138,32 @@ export default {
     },
     computed: {
         units() {
-            return this.meds.medications.map(m => m.unit)
+            return Array.from(new Set((this.meds.inventory || []).map((inv) => inv.unit).filter(Boolean)))
 
         },
         // Helper: Expiring items on used carts
         expiringOnUsedCarts() {
-            const used = (this.carts.carts || []).filter((c) => String(c.CartStatus).toLowerCase() === 'used')
+            const used = (this.carts.carts || []).filter((c) => {
+                const status = String(c.status || c.CartStatus || c.cartStatus || '').toLowerCase()
+                return status === 'in-use' || status === 'used'
+            })
             const items = []
             used.forEach((c) => {
-                const medsStr = c.Medications || ''
-                const names = medsStr.split(',').map((s) => s.trim()).filter(Boolean)
-                names.forEach((n) => {
-                    const m = (this.meds.medications || []).find((mm) => String(mm.name).toLowerCase() === String(n).toLowerCase())
-                    if (m) {
-                        const dl = this.daysUntil(m.expirationDate)
-                        items.push({ key: `${c.CartId}-${m.medicationId}`, cartId: c.CartId || c.CartId, name: m.name, expirationDate: m.expirationDate, daysLeft: dl })
-                    }
+                const medItems = Array.isArray(c.items) ? c.items : []
+                medItems.forEach((ci) => {
+                    const med = (this.meds.medications || []).find(
+                        (mm) => mm.medicationId === ci.medication_id || mm.medicationId === ci.medicationId
+                    )
+                    const name = med?.name || ci.medication_id || ci.medicationId || 'Unknown'
+                    const expiration = ci.expiration_date || ci.expirationDate || med?.expirationDate || null
+                    const dl = this.daysUntil(expiration)
+                    items.push({
+                        key: `${c.id || c.CartId}-${ci.id || ci.medication_id}`,
+                        cartId: c.id || c.CartId,
+                        name,
+                        expirationDate: expiration || '-',
+                        daysLeft: dl
+                    })
                 })
             })
             return items.sort((a, b) => a.daysLeft - b.daysLeft)
@@ -171,22 +181,37 @@ export default {
         },
         inventoryTotals() {
             const map = new Map()
-                ; (this.meds.medications || []).forEach((m) => {
-                    const name = m.name || 'unknown'
-                    const unit = m.unit || ''
+                ; (this.meds.inventory || []).forEach((inv) => {
+                    const med = (this.meds.medications || []).find((m) => m.medicationId === inv.medicationId)
+                    const name = med?.name || inv.medicationId || 'unknown'
+                    const unit = inv.unit || med?.unit || ''
                     const key = `${name}::${unit}`
-                    const qty = Number(m.quantity) || 0
-                    const entry = map.get(key) || { name, unit, totalQuantity: 0, locations: new Set(), earliestExpiry: null, key }
+                    const qty = Number(inv.amount) || 0
+                    const entry = map.get(key) || {
+                        name,
+                        unit,
+                        totalQuantity: 0,
+                        locations: new Set(),
+                        earliestExpiry: null,
+                        key
+                    }
                     entry.totalQuantity += qty
-                    if (m.location) entry.locations.add(m.location)
-                    if (m.expirationDate) {
+                    if (inv.location) entry.locations.add(inv.location)
+                    if (inv.expirationDate) {
                         const curr = entry.earliestExpiry ? new Date(entry.earliestExpiry) : null
-                        const cand = new Date(m.expirationDate)
-                        if (!curr || cand < curr) entry.earliestExpiry = m.expirationDate
+                        const cand = new Date(inv.expirationDate)
+                        if (!curr || cand < curr) entry.earliestExpiry = inv.expirationDate
                     }
                     map.set(key, entry)
                 })
-            return Array.from(map.values()).map((e) => ({ key: e.key, name: e.name, unit: e.unit, totalQuantity: e.totalQuantity, locations: Array.from(e.locations), earliestExpiry: e.earliestExpiry }))
+            return Array.from(map.values()).map((e) => ({
+                key: e.key,
+                name: e.name,
+                unit: e.unit,
+                totalQuantity: e.totalQuantity,
+                locations: Array.from(e.locations),
+                earliestExpiry: e.earliestExpiry
+            }))
         },
         inventoryFilteredSorted() {
             const q = String(this.search || '').toLowerCase()

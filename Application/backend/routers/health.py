@@ -2,16 +2,6 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.get("/", summary="Root endpoint")
-async def root():
-    """
-    Root endpoint of the API.
-
-    Returns:
-        dict: A welcome message from the API.
-    """
-    return {"message": "Hallo von FastAPI!"}
-
 
 @router.get("/health", summary="Health check endpoint")
 async def health():

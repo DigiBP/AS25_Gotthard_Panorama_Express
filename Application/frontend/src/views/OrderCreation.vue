@@ -7,7 +7,7 @@
                 <label>Needed by: <input type="date" v-model="neededBy" /></label>
                 <label>Ordered by: <input type="text" v-model="orderedBy" />
                     <span class="order-type-badge" :class="orderTypeClass" :title="orderTypeTitle">{{ orderTypeShort
-                    }}</span>
+                        }}</span>
                     <select class="order-type-select" v-model="orderTypeOverride" title="Order type override">
                         <option value="auto">Auto</option>
                         <option value="internal">Internal</option>
@@ -52,10 +52,10 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useCartsStore } from '../stores/carts'
-import { useMedicationsStore } from '../stores/medications'
-import { useOrdersStore } from '../stores/orders'
-import { useUserSessionStore } from '../stores/user_session'
+import { useCartsStore } from '../stores/carts.js'
+import { useMedicationsStore } from '../stores/medications.js'
+import { useOrdersStore } from '../stores/orders.js'
+import { useUserSessionStore } from '../stores/user_session.js'
 
 // local reactive rows for ordering multiple medicines
 const rows = ref([
@@ -132,7 +132,7 @@ function validateRows() {
     return { ok: true }
 }
 
-function submitOrder() {
+async function submitOrder() {
     message.value = ''
     const v = validateRows()
     if (!v.ok) {
@@ -145,44 +145,58 @@ function submitOrder() {
         return
     }
 
-    // build payload with medication details
-    const ordered = rows.value.map((r) => {
-        const meta = meds.byId(r.medicationId)
-        return {
-            medicationId: r.medicationId,
-            name: meta ? meta.name : r.medicationId,
-            dosage: meta ? meta.dosage : '',
-            quantity: r.quantity,
-            unit: meta ? (meta.unit || '') : '',
-            notes: r.notes || ''
-        }
-    })
+    // Build payload expected by backend OrderCreate
+    const medicationsPayload = rows.value.map((r) => ({
+        medicationId: r.medicationId,
+        amount: r.quantity,
+    }))
 
-    // Add a simple 'order' entry to carts store for visibility in the prototype app
+    const payload = {
+        name: ordererName.value || 'Order',
+        date: neededBy.value,
+        medications: medicationsPayload,
+        isInternal: effectiveIsInternal.value,
+        isRush: Boolean(isRush.value),
+    }
 
     try {
-        // use computed effective orderer name and effective internal/external (takes override into account)
-        const effectiveOrdererName = ordererName.value
-
-        const entry = orders.addOrder({
-            neededBy: neededBy.value,
-            orderedBy: effectiveOrdererName,
-            isRush: Boolean(isRush.value),
-            comment: orderComment.value || '',
-            items: ordered,
-            orderType: effectiveIsInternal.value ? 'internal' : 'external'
+        const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
         })
-        message.value = `Order placed — id ${entry.id}`
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}))
+            const detail = errData.detail || `Failed to place order (${res.status})`
+            throw new Error(detail)
+        }
+        const created = await res.json()
+
+        // Also store locally for UI history
+        orders.addOrder({
+            neededBy: payload.date,
+            orderedBy: payload.name,
+            isRush: payload.isRush,
+            comment: orderComment.value || '',
+            items: rows.value.map((r) => ({
+                medicationId: r.medicationId,
+                quantity: r.quantity,
+                notes: r.notes || '',
+            })),
+            orderType: payload.isInternal ? 'internal' : 'external',
+            backendId: created.id,
+        })
+
+        message.value = `Order placed — id ${created.id}`
         // reset form
         rows.value = [{ _uid: Date.now() + '-r0', medicationId: '', quantity: 1, notes: '' }]
         neededBy.value = ''
         isRush.value = false
         orderComment.value = ''
-        // reset override to auto
         orderTypeOverride.value = 'auto'
     } catch (err) {
         console.error(err)
-        message.value = 'Failed to place order. See console.'
+        message.value = `Failed to place order: ${err.message}`
     }
 }
 </script>

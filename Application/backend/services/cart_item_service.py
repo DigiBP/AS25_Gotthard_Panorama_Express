@@ -5,30 +5,36 @@ from fastapi import HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from Application.backend.models.cart_item import CartItem, AddToCartRequest
+from Application.backend.models.cart import Cart
+from Application.backend.models.cart_item import AddToCartRequest, CartItem
 from Application.backend.models.inventory import Inventory
 from Application.backend.models.medication import Medication
-from Application.backend.models.cart import Cart
+
+
+async def get_all_cart_items(session: AsyncSession) -> List[CartItem]:
+    result = await session.exec(select(CartItem))
+    return result.all()
 
 
 async def get_expiring_items(session: AsyncSession, days: int = 7) -> List[CartItem]:
     today = date.today()
     cutoff = today + timedelta(days=days)
     result = await session.exec(
-        select(CartItem).where(CartItem.expiration_date != None)
-                        .where(CartItem.expiration_date <= cutoff)
+        select(CartItem)
+        .where(CartItem.expiration_date != None)
+        .where(CartItem.expiration_date <= cutoff)
     )
     return result.all()
 
 
 async def get_cart_contents(session: AsyncSession, cart_id: int) -> List[CartItem]:
-    result = await session.exec(
-        select(CartItem).where(CartItem.cart_id == cart_id)
-    )
+    result = await session.exec(select(CartItem).where(CartItem.cart_id == cart_id))
     return result.all()
 
 
-async def add_medication_to_cart(session: AsyncSession, request: AddToCartRequest) -> CartItem:
+async def add_medication_to_cart(
+    session: AsyncSession, request: AddToCartRequest
+) -> CartItem:
     cart = await session.get(Cart, request.cart_id)
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
@@ -42,7 +48,9 @@ async def add_medication_to_cart(session: AsyncSession, request: AddToCartReques
         raise HTTPException(status_code=404, detail="Inventory item not found")
 
     if inventory.amount < request.amount:
-        raise HTTPException(status_code=400, detail=f"Not enough inventory. Available: {inventory.amount}"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough inventory for {medication.name}. Available: {inventory.amount} {inventory.unit}",
         )
 
     inventory.amount -= request.amount
@@ -58,7 +66,7 @@ async def add_medication_to_cart(session: AsyncSession, request: AddToCartReques
         amount=request.amount,
         unit=unit,
         time_sensitive=request.time_sensitive,
-        expiration_date=expiration_date
+        expiration_date=expiration_date,
     )
 
     session.add(cart_item)
@@ -66,3 +74,18 @@ async def add_medication_to_cart(session: AsyncSession, request: AddToCartReques
     await session.refresh(cart_item)
 
     return cart_item
+
+
+async def remove_cart_item(session: AsyncSession, id: int) -> None:
+    cart_item = await session.get(CartItem, id)
+    if not cart_item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+
+    # Return the amount back to inventory
+    inventory = await session.get(Inventory, cart_item.inventory_id)
+    if inventory:
+        inventory.amount += cart_item.amount
+        session.add(inventory)
+
+    await session.delete(cart_item)
+    await session.commit()

@@ -5,7 +5,12 @@
                 <h3>Patient: {{ patientId }}</h3>
                 <div style="font-size:12px; color:#888">Cart: {{ cartId }} · Room: {{ operationRoom }}</div>
             </div>
-            <span class="status">{{ status }}</span>
+            <div class="header-actions">
+                <span class="status">{{ status }}</span>
+                <button @click="$emit('remove-cart')" class="btn-delete-cart" title="Delete cart">
+                    🗑
+                </button>
+            </div>
         </header>
 
         <div class="cart-body">
@@ -17,16 +22,24 @@
                 <thead>
                     <tr>
                         <th class="med-col-name">Medicine</th>
-                        <th class="med-col-leftover">Leftover</th>
+                        <th class="med-col-leftover">Amount</th>
                         <th class="med-col-time">Time critical</th>
+                        <th class="med-col-actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(medicine, idx) in meds" :key="idx">
-                        <td class="med-name">{{ medicine }}</td>
-                        <td class="med-leftover">—</td>
+                        <td class="med-name">{{ medicine.label }}</td>
+                        <td class="med-leftover">{{ medicine.amount }}</td>
                         <td class="med-time">
-                            <input type="checkbox" :aria-label="'Time critical for ' + medicine" disabled />
+                            <input type="checkbox" :checked="medicine.timeSensitive"
+                                :aria-label="'Time critical for ' + medicine.label" disabled />
+                        </td>
+                        <td class="med-actions">
+                            <button v-if="medicine.id" @click="$emit('remove-medication', medicine.id)"
+                                class="btn-remove" title="Remove medication">
+                                ×
+                            </button>
                         </td>
                     </tr>
                 </tbody>
@@ -38,33 +51,46 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 
 const props = defineProps({ cart: { type: Object, required: true } })
-const c = props.cart || {}
+const c = toRef(props, 'cart')
 
 // Normalize common key variations present in the sample `carts.js` data
-const status = computed(() => c.CartStatus ?? c.cartStatus ?? c.status ?? 'unknown')
-const patientId = computed(() => c.patientId ?? c.patientID ?? c.patient ?? '—')
-const cartId = computed(() => c.CartId ?? c.id ?? c.cartId ?? '—')
-const operation = computed(() => c.Operation ?? c.plannedOperation ?? c.operation ?? '—')
-const anaesthesia = computed(() => c.FormofAnaesthesia ?? c.formOfAnaesthesia ?? c.FormOfAnaesthesia ?? '—')
-const operationDate = computed(() => c.operationDate ?? c.date ?? '')
-const operationRoom = computed(() => c.OperationRoom ?? c.operationRoom ?? c.room ?? '—')
+const status = computed(() => c.value.CartStatus ?? c.value.cartStatus ?? c.value.status ?? 'unknown')
+const patientId = computed(() => c.value.patientId ?? c.value.patientID ?? c.value.patient ?? '—')
+const cartId = computed(() => c.value.CartId ?? c.value.id ?? c.value.cartId ?? '—')
+const operation = computed(() => c.value.Operation ?? c.value.plannedOperation ?? c.value.operation ?? '—')
+const anaesthesia = computed(() => c.value.FormofAnaesthesia ?? c.value.formOfAnaesthesia ?? c.value.FormOfAnaesthesia ?? '—')
+const operationDate = computed(() => c.value.operationDate ?? c.value.date ?? '')
+const operationRoom = computed(() => c.value.OperationRoom ?? c.value.operationRoom ?? c.value.room ?? '—')
 
 const medsRaw = computed(() => {
-    // carts.js shows both "Medications" and (inconsistent) "Medication"
-    return c.Medications ?? c.Medication ?? c.medication ?? ''
+    // Prefer normalized cart.items attached by store; fallback to legacy fields
+    if (Array.isArray(c.value.items) && c.value.items.length) return c.value.items
+    return c.value.Medications ?? c.value.Medication ?? c.value.medication ?? ''
 })
 
 const meds = computed(() => {
-    if (!medsRaw.value) return []
-    // If already an array, use it; if string, split on commas
-    if (Array.isArray(medsRaw.value)) return medsRaw.value.map(m => String(m).trim()).filter(Boolean)
-    return String(medsRaw.value)
-        .split(',')
-        .map(m => m.replace(/\s*\'?$|^\'/g, '').trim())
-        .filter(Boolean)
+    const raw = medsRaw.value
+    if (!raw) return []
+    // If cart.items array is available
+    if (Array.isArray(raw)) {
+        return raw.map((m) => ({
+            id: m.id,
+            label: m.medication_id || m.medicationId || 'unknown',
+            amount: m.amount ?? '',
+            timeSensitive: Boolean(m.time_sensitive ?? m.timeSensitive),
+        }))
+    }
+    // Legacy string or array of names
+    const list = Array.isArray(raw)
+        ? raw.map((m) => String(m).trim()).filter(Boolean)
+        : String(raw)
+            .split(',')
+            .map((m) => m.replace(/\s*\'?$|^\'/g, '').trim())
+            .filter(Boolean)
+    return list.map((name) => ({ label: name, amount: '—', timeSensitive: false }))
 })
 </script>
 
@@ -86,6 +112,12 @@ const meds = computed(() => {
     align-items: center
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .cart-header .status {
     font-size: 12px;
     color: #666
@@ -94,23 +126,6 @@ const meds = computed(() => {
 .cart-body .med {
     font-size: 13px;
     color: #333
-}
-
-.cart-card {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
-    padding: 12px;
-    background: white;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.cart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center
 }
 
 .cart-header .status {
@@ -171,5 +186,56 @@ const meds = computed(() => {
 /* Checkbox centering */
 .med-time input[type="checkbox"] {
     transform: scale(1);
+}
+
+/* Actions column */
+.med-col-actions {
+    width: 80px;
+    text-align: center;
+}
+
+.med-actions {
+    text-align: center;
+}
+
+.btn-remove {
+    background: grey;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-remove:hover {
+    background: #cc0000;
+}
+
+.btn-delete-cart {
+    padding: 0.1rem 0.4rem;
+    background: grey;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px;
+}
+
+.btn-delete-cart:hover {
+    opacity: 0.8;
+    background-color: #cc0000;
 }
 </style>
