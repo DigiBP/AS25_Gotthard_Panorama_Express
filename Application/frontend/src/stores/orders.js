@@ -10,6 +10,31 @@ import { ref } from 'vue'
  */
 export const useOrdersStore = defineStore('orders', () => {
     const orders = ref([])
+    const loading = ref(false)
+    const error = ref(null)
+
+    async function fetchOrders() {
+        loading.value = true
+        error.value = null
+        try {
+            const res = await fetch('/api/orders', { method: 'GET' })
+            if (!res.ok) throw new Error(`Failed to fetch orders (${res.status})`)
+            const data = await res.json()
+            console.log('Fetched orders:', data)
+            orders.value = Array.isArray(data) ? data : []
+            return orders.value
+        } catch (err) {
+            console.error(err)
+            error.value = err?.message || 'Failed to load orders'
+            orders.value = []
+            return orders.value
+        } finally {
+            loading.value = false
+        }
+    }
+
+    // Initial load
+    fetchOrders()
 
     function addOrder(order) {
         const id = `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
@@ -33,5 +58,9 @@ export const useOrdersStore = defineStore('orders', () => {
         if (idx !== -1) orders.value.splice(idx, 1)
     }
 
-    return { orders, addOrder, getOrder, removeOrder }
+    async function refresh() {
+        return await fetchOrders()
+    }
+
+    return { orders, loading, error, addOrder, getOrder, removeOrder, fetchOrders, refresh }
 })
