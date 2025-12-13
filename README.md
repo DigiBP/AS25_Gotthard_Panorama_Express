@@ -11,7 +11,7 @@
     * [Key Limitations of the AS-IS Process](#key-limitations-of-the-as-is-process)
     * [AS-IS BPMN Diagram](#as-is-bpmn-diagram)
     * [Project Goal](#project-goal)
-* [TO-BE Process](#to-be-process-implementation)
+* [TO-BE Process](#to-be-process)
     * [TO-BE BPMN Diagram](#to-be-bpmn-diagram)
     * [Challenges and Requirements](#challenges-and-requirements-addressed-by-the-to-be-process)
     * [Users and Stakeholders](#users-and-stakeholders)
@@ -47,6 +47,9 @@
 In large anaesthesia departments, medication preparation and stock management are still largely **manual**, fragmented, and poorly documented. Every day, medications are prepared, partially used, stored for reuse, or discarded — yet these steps are often **not digitally tracked**. As a result, hospitals face unnecessary medication waste, high operational costs, inefficient workflows, and limited transparency.
 
 This project designs and prototypes a **digital medication preparation and stock management system** for anaesthesia department. Using **process modeling (AS-IS / TO-BE)** and a prototype system design, the project aims to standardize workflows (e.g. order/preparation process steps), improve traceability, and support automation of daily clinical and storage activities. The solution focuses on making medication handling more transparent,and efficient without disrupting existing clinical routines.
+
+
+[⬆️ Back to Top](#table-of-contents)
 
 ---
 
@@ -93,6 +96,8 @@ The system aims to:
 - enable fast medication search, location, and restocking
 - improve coordination between clinical staff and storage personnel and also departments
 - increase transparency and traceability through a digital checklist for medication preparation workflows
+
+[⬆️ Back to Top](#table-of-contents)
 
 ---
 
@@ -195,6 +200,8 @@ Advanced features such as automated alerts, predictive analytics, or forecasting
 
 The BPMN serves as a **conceptual and prototype-level design**, providing a solid foundation for future digital extensions.
 
+[⬆️ Back to Top](#table-of-contents)
+
 ---
 
 # Technologies Used🛠
@@ -218,7 +225,9 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 - [ ] Reports and Analytics
 
 
+[⬆️ Back to Top](#table-of-contents)
 
+---
 
 # Limitations
 - **Prototype-level implementation:** The project demonstrates the concept and workflow design, not a production-ready system.
@@ -227,7 +236,7 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 - **Manual demo input:** For demonstration purposes, some data entries and status updates are performed manually.
 
 
-
+[⬆️ Back to Top](#table-of-contents)
 
 
 
