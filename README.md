@@ -82,7 +82,7 @@ Together, these issues cause significant **time loss, medication waste, and avoi
 ## AS-IS BPMN Diagram
 
 
-![V2](Camunda/Archive/Updated_BPMN.png)
+![V2](Camunda/Archive/Updated_As_Is_BPMN.png)
 
 ---
 
