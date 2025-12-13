@@ -19,11 +19,13 @@ from Application.backend.routers import (
     notifications,
     orders,
 )
+from Application.backend.worker import start_camunda_workers
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    start_camunda_workers()
     yield
 
 
@@ -31,7 +33,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 origins = [
-    "http://localhost:5173",  # Standard Vite/Vue port
+    "http://localhost:5173",  # only needed for local development
 ]
 
 app.add_middleware(
@@ -44,9 +46,6 @@ app.add_middleware(
 
 api_router = APIRouter(prefix="/api")
 
-# 2. Include all your sub-routers into the Master router
-# Note: If your sub-routers already have prefixes (like prefix="/carts"),
-# they will automatically combine to become "/api/carts"
 api_router.include_router(health.router)
 api_router.include_router(medications.router)
 api_router.include_router(inventories.router)
@@ -56,20 +55,9 @@ api_router.include_router(cart_items.router)
 api_router.include_router(checklists.router)
 api_router.include_router(notifications.router)
 
-# 3. Include the Master router into the App
+
 app.include_router(api_router)
 
-
-@app.post("/start_flow")
-async def start_flow():
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:5678/webhook-test/04ced486-2466-431f-b1fd-ea604848459b"
-        )
-        return {"status": response.status_code, "response": response.text}
-
-
-# VUEJS frontend
 dist_directory = os.path.join(os.path.dirname(__file__), "./public")
 
 if os.path.exists(os.path.join(dist_directory, "assets")):
@@ -80,6 +68,16 @@ if os.path.exists(os.path.join(dist_directory, "assets")):
     )
 
 
+@app.post("/start_flow")
+#  TODO transfer to camunda
+async def start_flow():
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://localhost:5678/webhook-test/04ced486-2466-431f-b1fd-ea604848459b"
+        )
+        return {"status": response.status_code, "response": response.text}
+
+
 @app.get("/front")
 async def serve_spa_root():
     # If user types /front, we serve the index
@@ -88,9 +86,7 @@ async def serve_spa_root():
 
 @app.get("/front/{full_path:path}")
 async def serve_spa_subpath(full_path: str):
-    # This catches /front/login, /front/user/123, etc.
 
-    # Optional: Check if a physical file exists (like favicon inside dist root)
     file_path = os.path.join(dist_directory, full_path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         return FileResponse(file_path)
