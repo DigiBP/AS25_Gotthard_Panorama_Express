@@ -1,5 +1,8 @@
 # Medication Preparation & Stock Management System  
-**Team:** Gotthard_Panorama_Express
+
+### **Team: Gotthard Panorama Express**
+
+![V8](Camunda/Archive/5.jpg)
 
 ## Table of Contents
 * [Project Members](#project-members)
