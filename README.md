@@ -1,43 +1,45 @@
-# Medication Preparation & Stock Management System  
+# Medication Preparation & Stock Management System
 
 ### **Team: Gotthard Panorama Express**
 
 ![V8](Camunda/Archive/5.jpg)
 
 ## Table of Contents
-* [Project Members](#project-members)
-* [Abstract & Project Overview](#abstract--project-overview)
-* [AS-IS Process](#as-is-process)
-    * [Key Limitations of the AS-IS Process](#key-limitations-of-the-as-is-process)
-    * [AS-IS BPMN Diagram](#as-is-bpmn-diagram)
-    * [Project Goal](#project-goal)
-* [TO-BE Process](#to-be-process)
-    * [TO-BE BPMN Diagram](#to-be-bpmn-diagram)
-    * [Challenges and Requirements](#challenges-and-requirements-addressed-by-the-to-be-process)
-    * [Users and Stakeholders](#users-and-stakeholders)
-* [Technologies Used](#technologies-used)
-    * [Frontend Mockups](#frontend-mockups)
-* [Limitations](#limitations)
 
+- [Project Members](#project-members)
+- [Abstract & Project Overview](#abstract--project-overview)
+- [AS-IS Process](#as-is-process)
+  - [Key Limitations of the AS-IS Process](#key-limitations-of-the-as-is-process)
+  - [AS-IS BPMN Diagram](#as-is-bpmn-diagram)
+  - [Project Goal](#project-goal)
+- [TO-BE Process](#to-be-process)
+  - [TO-BE BPMN Diagram](#to-be-bpmn-diagram)
+  - [Challenges and Requirements](#challenges-and-requirements-addressed-by-the-to-be-process)
+  - [Users and Stakeholders](#users-and-stakeholders)
+- [Technologies Used](#technologies-used)
+  - [Frontend Mockups](#frontend-mockups)
+- [Limitations](#limitations)
 
 ---
+
 # Project members
 
 ## Project Team / Authors
-| Name       | Role                      | Email                      |
-|------------|---------------------------|----------------------------|
-| Janosh     | BPMN and Backend          | janosh.werlen@students.fhnw.ch |
-| Dj         | Data Specialist / Backend | djordji.pavloski@students.fhnw.ch |
-| Merel      | APIs and Frontend         | annemereldjeong@gmail.com |
-| Donna      | Medical Expert            | donna.tennigkeit@students.fhnw.ch |
-| Viktorija  | Medical Expert            | viktorija.kenstaviciute@students.fhnw.ch |
 
+| Name      | Role                      | Email                                    |
+| --------- | ------------------------- | ---------------------------------------- |
+| Janosh    | BPMN and Backend          | janosh.werlen@students.fhnw.ch           |
+| Dj        | Data Specialist / Backend | djordji.pavloski@students.fhnw.ch        |
+| Merel     | APIs and Frontend         | annemerel.dejong@students.fhnw.ch       |
+| Donna     | Medical Expert            | donna.tennigkeit@students.fhnw.ch        |
+| Viktorija | Medical Expert            | viktorija.kenstaviciute@students.fhnw.ch |
 
 ## Supervisors
-| Name               | Email |
-|--------------------|-------|
-| Andreas Martin     | andreas.martin@fhnw.ch |
-| Charuta Pande      | charuta.pande@fhnw.ch |
+
+| Name               | Email                      |
+| ------------------ | -------------------------- |
+| Andreas Martin     | andreas.martin@fhnw.ch     |
+| Charuta Pande      | charuta.pande@fhnw.ch      |
 | Devid Montecchiari | devid.montecchiari@fhnw.ch |
 
 ---
@@ -47,7 +49,6 @@
 In large anaesthesia departments, medication preparation and stock management are still largely **manual**, fragmented, and poorly documented. Every day, medications are prepared, partially used, stored for reuse, or discarded — yet these steps are often **not digitally tracked**. As a result, hospitals face unnecessary medication waste, high operational costs, inefficient workflows, and limited transparency.
 
 This project designs and prototypes a **digital medication preparation and stock management system** for anaesthesia department. Using **process modeling (AS-IS / TO-BE)** and a prototype system design, the project aims to standardize workflows (e.g. order/preparation process steps), improve traceability, and support automation of daily clinical and storage activities. The solution focuses on making medication handling more transparent,and efficient without disrupting existing clinical routines.
-
 
 [⬆️ Back to Top](#table-of-contents)
 
@@ -60,7 +61,9 @@ This project designs and prototypes a **digital medication preparation and stock
 Anaesthesia teams handle large volumes of **high-value, time-critical medications** under strict safety and availability requirements. However, current workflows suffer from several structural limitations:
 
 ### No Digital Tracking of Medication Usage
+
 Prepared syringes or vials may be partially used, reused later, or discarded, but these actions are rarely documented, resulting in:
+
 - unnecessary disposal of usable medication (unnecessary costs)
 - no structured second-use management
 - consumption data is incomplete or inaccurate
@@ -68,6 +71,7 @@ Prepared syringes or vials may be partially used, reused later, or discarded, bu
 ### Manual Storage and Medication Location
 
 Medication storage is managed manually, and large storage areas make it difficult to quickly locate specific medications. As a result:
+
 - high dependency on storage workers for information
 - no real-time overview of stock levels
 - risk of overlooked expiry dates
@@ -78,9 +82,7 @@ Medication storage is managed manually, and large storage areas make it difficul
 
 Together, these issues cause significant **time loss, medication waste, and avoidable costs**, while preventing reliable planning and optimization of anaesthesia medication supply.
 
-
 ## AS-IS BPMN Diagram
-
 
 ![V2](Camunda/Archive/Updated_As_Is_BPMN.png)
 
@@ -91,6 +93,7 @@ Together, these issues cause significant **time loss, medication waste, and avoi
 The goal of this project is to **digitalize and streamline medication preparation and stock management in anaesthesia** through an integrated Medication Preparation & Management System.
 
 The system aims to:
+
 - provide real-time visibility into medication preparation, usage, reuse, return, and disposal with up-to-date available quantities
 - reduce medication waste and expiry-related losses
 - enable fast medication search, location, and restocking
@@ -110,24 +113,26 @@ The process is modeled using **BPMN (TO-BE)** and serves as the foundation for a
 The overall goal is to improve traceability, reduce waste, and provide better guidance for locating and restocking medications, without disrupting established clinical routines.
 
 ## TO-BE BPMN Diagram
+
 ![V3](Camunda/Update_3.0.png)
-*Figure: TO-BE BPMN model of the digital medication preparation and stock management process.*
+_Figure: TO-BE BPMN model of the digital medication preparation and stock management process._
 
 ## Challenges and Requirements Addressed by the TO-BE Process
 
-| Challenge | Requirement |
-|----------|-------------|
-| Medication usage is **not tracked** | Automated tracking of preparation, usage, reuse, and disposal |
-| Stock levels are **managed manually** | Real-time inventory visibility |
-| Expiry dates are **checked late or inconsistently** | Automated expiry monitoring and alerts |
-| Medication is **hard to locate** | Digital search and location guidance |
-| High **time and cost overhead** | Workflow automation and reduced manual coordination |
+| Challenge                                           | Requirement                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------- |
+| Medication usage is **not tracked**                 | Automated tracking of preparation, usage, reuse, and disposal |
+| Stock levels are **managed manually**               | Real-time inventory visibility                                |
+| Expiry dates are **checked late or inconsistently** | Automated expiry monitoring and alerts                        |
+| Medication is **hard to locate**                    | Digital search and location guidance                          |
+| High **time and cost overhead**                     | Workflow automation and reduced manual coordination           |
 
 ---
 
 ## Users and Stakeholders
 
 ### AS-IS Stakeholders
+
 - Storage Worker
 - Nurse
 - Doctor
@@ -135,17 +140,19 @@ The overall goal is to improve traceability, reduce waste, and provide better gu
 - Administrator
 
 ### TO-BE Stakeholders (SHOULD-BE)
-- Storage Worker *(automated ordering support)*
-- Nurse *(digital ordering interface)*
-- Doctor *(prescription system integration)*
-- Pharmacist *(inventory + preparation management)*
-- Administrator *(system oversight)*
+
+- Storage Worker _(automated ordering support)_
+- Nurse _(digital ordering interface)_
+- Doctor _(prescription system integration)_
+- Pharmacist _(inventory + preparation management)_
+- Administrator _(system oversight)_
 
 ---
 
 ## Data Objects
 
 ### Medication Data Template (JSON)
+
 The project uses structured medication objects to ensure consistent storage and API communication.
 
 ```json
@@ -161,33 +168,22 @@ The TO-BE workflow follows a structured sequence:
 
 1. **Medication preparation**  
    Medication is prepared according to standardized steps and documented digitally to ensure clarity and traceability.
-   After the procedure, the medication status is explicitly evaluated:
-        - fully used
-        - partially used and eligible for storage
-        - or discarded
+   After the procedure, the medication status is explicitly evaluated: - fully used - partially used and eligible for storage - or discarded
 
-    This decision is captured in the workflow and determines the subsequent process path.
+   This decision is captured in the workflow and determines the subsequent process path.
 
 2. **Medication Usage and Post-Procedure Handling**  
    If medication is **fully used**, the process continues with documentation and closes the preparation cycle.
-   If medication is **partially used**, the workflow guides the user to:
-        - document remaining quantity
-        - decide on storage eligibility
-        - and assign a storage location
-    
-    Discarded medication is recorded accordingly to maintain transparency and accountability.
+   If medication is **partially used**, the workflow guides the user to: - document remaining quantity - decide on storage eligibility - and assign a storage location
+
+   Discarded medication is recorded accordingly to maintain transparency and accountability.
 
 3. **Storage and availability Management**  
    Stored medication becomes visible within the system as available stock.  
-   The TO-BE process ensures that:
-        - storage locations are documented
-        - available quantities are updated
+   The TO-BE process ensures that: - storage locations are documented - available quantities are updated
 
 4. **Restocking and coordination**  
-   The TO-BE process explicitly models interactions between:
-        - anaesthesia staff (preparation and usage),
-        - storage workers (availability and restocking),
-        - and system-supported documentation steps.
+   The TO-BE process explicitly models interactions between: - anaesthesia staff (preparation and usage), - storage workers (availability and restocking), - and system-supported documentation steps.
 
 By making responsibilities and handovers explicit, the process reduces ambiguity, interruptions, and information loss.
 
@@ -212,7 +208,6 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 - Business Logic: Python
 - Workflow Engine: Langflow
 
-
 ## Frontend Mockups
 
 ### Proposed Screens
@@ -224,30 +219,21 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 - <del>[ ] User Profile/Settings<del> -> wasting time
 - [ ] Reports and Analytics
 
-
 [⬆️ Back to Top](#table-of-contents)
 
 ---
 
 # Limitations
+
 - **Prototype-level implementation:** The project demonstrates the concept and workflow design, not a production-ready system.
 - **No hospital system integration:** Interfaces to real clinical systems (e.g., HIS/EMR, pharmacy systems, barcode/RFID, procurement) are out of scope.
 - **No analytics/forecasting features:** Automated alerts, and predictive planning are not implemented in this version.
 - **Manual demo input:** For demonstration purposes, some data entries and status updates are performed manually.
 
-
 [⬆️ Back to Top](#table-of-contents)
 
+---
 
-
-
-
-
-
-
-
-
-------------------------
 # LEFTOVERS from old README.md
 
 ## Next Steps TILL 20.11:
@@ -279,4 +265,3 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 | [ ]   | Demo user story                                          |     |        |
 | [ ]   | Transform Demo user story into Frontend/Backend/Camunda  |     |        |
 | [ ]   | Think about AI possibilities                             |     |        |
-
