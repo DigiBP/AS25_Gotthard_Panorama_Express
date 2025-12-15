@@ -471,7 +471,7 @@ def handle_create_cart(task: ExternalTask) -> TaskResult:
 def handle_update_cart_status(task: ExternalTask) -> TaskResult:
     """
     Handles the 'update-cart-status' topic from Camunda.
-    Updates the cart status to 'in_use'.
+    Updates the cart status to 'In-Use'.
     Args:
         task (ExternalTask): The Camunda external task containing variables.
     Returns:
@@ -487,12 +487,13 @@ def handle_update_cart_status(task: ExternalTask) -> TaskResult:
             retry_timeout=1000,
         )
 
-    logging_to_frontend("Bridge", f"Updating cart {cart_id} status to 'in_use'")
+    logging_to_frontend("Bridge", f"Updating cart {cart_id} status to 'In-Use'")
 
     try:
-        response = requests.put(  # Change PATCH to PUT
-            f"{BACKEND_API_URL}/carts/{cart_id}",
-            json={"status": "In-Use"},
+        # Use the PATCH /status endpoint with the correct payload
+        response = requests.patch(
+            f"{BACKEND_API_URL}/carts/{cart_id}/status",
+            json={"new_status": "In-Use"},  # Matches the embed=True body
         )
 
         if response.status_code == 200:
