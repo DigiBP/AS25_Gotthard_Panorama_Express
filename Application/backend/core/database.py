@@ -12,7 +12,7 @@ from Application.backend.services.medication_service import create_medication
 from Application.backend.models.inventory import Inventory, InventoryCreate
 from Application.backend.services.inventory_service import add_inventory
 
-DATABASE_URL = "postgresql+asyncpg://gotthard_user:panorama_password@localhost:5432/express_database"
+DATABASE_URL = "postgresql+asyncpg://gotthard_user:panorama_password@localhost:5433/express_database"
 
 engine: AsyncEngine = create_async_engine(DATABASE_URL, echo=True, future=True)
 

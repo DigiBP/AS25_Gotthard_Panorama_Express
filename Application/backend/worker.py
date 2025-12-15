@@ -4,6 +4,9 @@ import threading
 
 logging.basicConfig(level=logging.INFO)
 
+# Disable annoying Camunda worker logs
+logging.getLogger('camunda').setLevel(logging.WARNING)
+
 import requests
 from camunda.external_task.external_task import ExternalTask, TaskResult
 from camunda.external_task.external_task_worker import ExternalTaskWorker
@@ -96,7 +99,6 @@ def handle_inventory_check(task: ExternalTask) -> TaskResult:
         )
 
 
-# TODO don't know the exact steps
 def handle_ai_check(task: ExternalTask) -> TaskResult:
     """
     Handles the 'ai-check' topic from Camunda.
@@ -113,41 +115,62 @@ def handle_ai_check(task: ExternalTask) -> TaskResult:
     logging_to_frontend("Bridge", f"Asking AI/Storage about: {name}")
 
     try:
-        # get location
-        response = requests.get(f"{BACKEND_API_URL}/inventory/{med_id}")
+        # Send request to the specified webhook URL
+        webhook_url = "http://localhost:5678/webhook/04ced486-2466-431f-b1fd-ea604848459b"
+        payload = {
+            "medication_name": name,
+            "medication_id": med_id,
+            "amount": amount_needed
+        }
+        response = requests.post(webhook_url, json=payload)
 
         if response.status_code == 200:
-            result = response.json()[0]
-            location = result.get("location") or "Unknown"
-        else:
-            location = "Unknown"
+            result_list = response.json()
+            if isinstance(result_list, list) and result_list:
+                output = result_list[0].get("output", {})
+                found_str = output.get("found", "No")
+                found = found_str.lower() == "yes"  # Convert string to boolean
+                text = output.get("text", "")
+                
+                # Log the AI response text if present
+                if text:
+                    logging_to_frontend("AI Response", text)
+                
+                # Use defaults for missing fields
+                location = "Unknown" # Not provided in response
+                amount = amount_needed  # Not provided, use needed amount
+                medication_id = med_id  # Not provided, use original
 
-        payload = [
-            {
-                "checked": True,
-                "name": name,
-                "location": location,
-                "amount": amount_needed,
-            }
-        ]
-
-        response = requests.post(f"{BACKEND_API_URL}/checklist", json=payload)
-
-        if response.status_code == 200:
-            result = response.json()[0]
-            found = result.get("checked")
-
-            return task.complete(
-                {
-                    "found": found,
-                    "medication_id": result.get("medication_id"),
-                    "location": result.get("location"),
-                    "amount": result.get("amount"),
-                }
-            )
+                # Instead of POST to /checklist, store in Camunda variable
+                checklist_payload = [
+                    {
+                        "checked": found,
+                        "name": name,
+                        "location": location,
+                        "amount": amount,
+                        "medication_id": med_id,
+                    }
+                ]
+                # No backend POST needed
+                return task.complete(
+                    {
+                        "found": found,
+                        "medication_id": medication_id,
+                        "location": location,
+                        "amount": amount,
+                        "checklist": checklist_payload,  # Store as JSON variable
+                    }
+                )
+            else:
+                return task.failure(
+                    error_message="Invalid response format from webhook",
+                    error_details="Expected a non-empty list",
+                    max_retries=0,
+                    retry_timeout=1000,
+                )
         else:
             return task.failure(
-                error_message=f"AI Check Failed ({response.status_code})",
+                error_message=f"Webhook request failed ({response.status_code})",
                 error_details=response.text,
                 max_retries=0,
                 retry_timeout=1000,
@@ -266,6 +289,229 @@ def handle_create_order(task: ExternalTask) -> TaskResult:
             max_retries=0,
             retry_timeout=1000,
         )
+    
+
+
+def handle_update_checklist(task: ExternalTask) -> TaskResult:
+    """
+    Handles the 'update-checklist' topic from Camunda.
+    Updates the 'found' (checked) status of a medication in the checklist after the AI step.
+    Args:
+        task (ExternalTask): The Camunda external task containing variables.
+    Returns:
+        TaskResult: The result to send back to Camunda (complete or failure).
+    """
+    medication_id = task.get_variable("medication_id")
+    new_found = bool(task.get_variable("new_found"))
+    checklist = task.get_variable("checklist")  # Get from Camunda variable
+
+    logging_to_frontend("Bridge", f"Updating checklist for {medication_id} to found: {new_found}")
+
+    if not checklist:
+        return task.failure(
+            error_message="Checklist not found",
+            error_details="Checklist variable is missing",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+    # Find and update the item
+    item = next((i for i in checklist if i.get("medication_id") == medication_id), None)
+    if item:
+        item["checked"] = new_found
+        return task.complete({"checklist": checklist})  # Return updated checklist
+    else:
+        return task.failure(
+            error_message="Checklist item not found",
+            error_details=f"No item for medication_id {medication_id}",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+
+
+def handle_check_carts(task: ExternalTask) -> TaskResult:
+    """
+    Handles the 'check-carts' topic from Camunda.
+    Fetches cart information from the webhook and determines availability.
+    Args:
+        task (ExternalTask): The Camunda external task containing variables.
+    Returns:
+        TaskResult: The result to send back to Camunda (complete or failure).
+    """
+    logging_to_frontend("Bridge", "Checking carts availability")
+
+    try:
+        # Send GET request to the webhook (since POST is not registered)
+        webhook_url = "http://localhost:5678/webhook/d5de05e8-553c-4074-b5c7-498a949f33d3"
+        response = requests.get(webhook_url, timeout=30)  # Change to GET
+
+        if response.status_code == 200:
+            carts = response.json()
+            available = len(carts) > 0
+            logging.info(f"[DEBUG] Carts: {carts}, Available: {available}")
+            
+            result = {
+                "carts": carts,
+                "available": available,
+            }
+            
+            # If available, include the cart_id of the first cart for update-cart-status
+            if available:
+                result["cart_id"] = carts[0]["id"]
+            
+            return task.complete(result)
+        else:
+            return task.failure(
+                error_message=f"Failed to fetch carts ({response.status_code})",
+                error_details=response.text,
+                max_retries=0,
+                retry_timeout=1000,
+            )
+
+    except Exception as e:
+        return task.failure(
+            error_message=str(e),
+            error_details="Carts check request failed",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+
+def handle_create_cart(task: ExternalTask) -> TaskResult:
+    """
+    Handles the 'create-cart' topic from Camunda.
+    Creates a new cart and adds checklist items as cart items using existing endpoints.
+    Args:
+        task (ExternalTask): The Camunda external task containing variables.
+    Returns:
+        TaskResult: The result to send back to Camunda (complete or failure).
+    """
+    checklist = task.get_variable("checklist")  # Get from Camunda variable
+
+    if not checklist:
+        return task.failure(
+            error_message="Checklist not found",
+            error_details="Checklist variable is missing",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+    logging_to_frontend("Bridge", "Creating cart with checklist items")
+
+    # Create the cart with default data
+    cart_data = {
+        "status": "Prepared",
+        "patientId": task.get_variable("patientId", "patient-123"),
+        "operation": task.get_variable("operation", "Medication Dispensing"),
+        "operationDate": task.get_variable("operationDate", "2025-12-15"),
+        "anaesthesiaType": task.get_variable("anaesthesiaType", "General"),
+        "roomNumber": task.get_variable("roomNumber", "OR-01"),
+    }
+
+    try:
+        # Create the cart
+        create_cart_response = requests.post(f"{BACKEND_API_URL}/carts", json=cart_data)
+        if create_cart_response.status_code != 200:
+            return task.failure(
+                error_message=f"Failed to create cart ({create_cart_response.status_code})",
+                error_details=create_cart_response.text,
+                max_retries=0,
+                retry_timeout=1000,
+            )
+
+        cart = create_cart_response.json()
+        cart_id = cart["id"]
+
+        # Add checklist items as cart items (only if checked: true)
+        for item in checklist:
+            if not item.get("checked", False):
+                continue  # Skip unchecked items
+
+            medication_id = item["medication_id"]
+            amount = item["amount"]
+
+            # Fetch inventory_id for the medication
+            inventory_response = requests.get(f"{BACKEND_API_URL}/inventory/{medication_id}")
+            if inventory_response.status_code != 200:
+                logging.warning(f"Failed to fetch inventory for {medication_id}, skipping")
+                continue
+
+            inventory_list = inventory_response.json()
+            if not inventory_list:
+                logging.warning(f"No inventory found for {medication_id}, skipping")
+                continue
+
+            inventory_id = inventory_list[0]["id"]  # Use the first inventory item
+
+            # Add to cart using the correct endpoint
+            cart_item_data = {
+                "cart_id": cart_id,
+                "inventory_id": inventory_id,
+                "medication_id": medication_id,
+                "amount": amount,
+            }
+
+            add_item_response = requests.post(f"{BACKEND_API_URL}/cart-items/add", json=cart_item_data)
+            if add_item_response.status_code != 200:
+                logging.warning(f"Failed to add cart item for {medication_id}: {add_item_response.text}")
+                # Continue with other items instead of failing the whole task
+
+        return task.complete({"cart_id": cart_id})
+
+    except Exception as e:
+        return task.failure(
+            error_message=str(e),
+            error_details="Create cart request failed",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+
+def handle_update_cart_status(task: ExternalTask) -> TaskResult:
+    """
+    Handles the 'update-cart-status' topic from Camunda.
+    Updates the cart status to 'in_use'.
+    Args:
+        task (ExternalTask): The Camunda external task containing variables.
+    Returns:
+        TaskResult: The result to send back to Camunda (complete or failure).
+    """
+    cart_id = task.get_variable("cart_id")
+
+    if not cart_id:
+        return task.failure(
+            error_message="cart_id is required",
+            error_details="cart_id parameter is missing",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+    logging_to_frontend("Bridge", f"Updating cart {cart_id} status to 'in_use'")
+
+    try:
+        response = requests.put(  # Change PATCH to PUT
+            f"{BACKEND_API_URL}/carts/{cart_id}",
+            json={"status": "In-Use"},
+        )
+
+        if response.status_code == 200:
+            return task.complete()
+        else:
+            return task.failure(
+                error_message=f"Cart status update failed ({response.status_code})",
+                error_details=response.text,
+                max_retries=0,
+                retry_timeout=1000,
+            )
+
+    except Exception as e:
+        return task.failure(
+            error_message=str(e),
+            error_details="Cart status update request failed",
+            max_retries=0,
+            retry_timeout=1000,
+        )
 
 
 def start_subscription(topic, handler, i):
@@ -291,6 +537,10 @@ def start_camunda_workers():
         ("inventory-check", handle_inventory_check),
         ("update-stock", handle_update_stock),
         ("create-order", handle_create_order),
+        ("update-checklist", handle_update_checklist),
+        ("check-carts", handle_check_carts),
+        ("create-cart", handle_create_cart),
+        ("update-cart-status", handle_update_cart_status),  # Add new topic
     ]
 
     idx = 1
