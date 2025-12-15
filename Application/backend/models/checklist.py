@@ -10,7 +10,6 @@ class ChecklistItem(BaseModel):
 class ChecklistItemResponse(BaseModel):
     checked: bool
     name: str
-    medication_id: str
     location: str
     amount: float
 
