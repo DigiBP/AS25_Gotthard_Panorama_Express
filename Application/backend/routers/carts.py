@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, Path
+from fastapi import APIRouter, Body, Depends, Path, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from Application.backend.core.database import get_session
@@ -76,3 +76,17 @@ async def delete_cart(
     """
     await remove_cart(session, cart_id)
     return {"message": "Cart deleted successfully"}
+
+
+@router.put("/{cart_id}", response_model=Cart)
+def update_cart(
+    cart_id: int, cart_update: CartCreate, session: AsyncSession = Depends(get_session)
+):
+    cart = session.get(Cart, cart_id)
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+    for key, value in cart_update.dict().items():
+        setattr(cart, key, value)
+    session.commit()
+    session.refresh(cart)
+    return cart
