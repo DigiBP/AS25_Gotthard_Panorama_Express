@@ -1,0 +1,50 @@
+[
+  {
+    "checked": false,
+    "name": "Rocuronium",
+    "location": "Unknown",
+    "amount": 5
+  },
+  {
+    "checked": false,
+    "name": "Fentanyl",
+    "location": "Unknown",
+    "amount": 10
+  },
+  {
+    "checked": false,
+    "name": "Remifentanil",
+    "location": "Unknown",
+    "amount": 1
+  },
+  {
+    "checked": false,
+    "name": "Lidocaine",
+    "location": "Unknown",
+    "amount": 5
+  },
+  {
+    "checked": false,
+    "name": "Ephedrin",
+    "location": "Unknown",
+    "amount": 10
+  },
+  {
+    "checked": false,
+    "name": "Phenylephrine",
+    "location": "Unknown",
+    "amount": 5
+  },
+  {
+    "checked": false,
+    "name": "Propofol",
+    "location": "Unknown",
+    "amount": 50
+  },
+  {
+    "checked": false,
+    "name": "Ringer Acetate",
+    "location": "Unknown",
+    "amount": 1
+  }
+]
