@@ -1,0 +1,286 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2848,
+        4096
+      ],
+      "id": "f6570577-7197-48f2-aaca-3b678214fce5",
+      "name": "Webhook5",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2640,
+        4096
+      ],
+      "id": "0590113e-c4f8-40f8-991b-80886b5e3b94",
+      "name": "Checklist5"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2432,
+        4096
+      ],
+      "id": "cd3a0ca5-01c9-4604-b31f-8858dfd7177a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ -$json.amount }} {{ $json.name }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -2560,
+        4784
+      ],
+      "id": "b87b9a07-a235-4711-8785-bb2fc46644ac",
+      "name": "AI Storage worker5"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -2592,
+        4624
+      ],
+      "id": "e03281f1-086a-4b7b-ae13-4302902310b4",
+      "name": "OpenAI Chat Model5",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2448,
+        4624
+      ],
+      "id": "ac21d1c1-2ba7-45c6-8455-885527a9ab38",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ea2b22f1-ce36-4988-8f59-f67b7ce05c6b",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        4832
+      ],
+      "id": "ffaa367f-ae19-4789-b682-54804390c644",
+      "name": "Webhook6",
+      "webhookId": "ea2b22f1-ce36-4988-8f59-f67b7ce05c6b"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2208,
+        4784
+      ],
+      "id": "aef0c4c1-103e-43d9-bc5e-13836e52c749",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/carts/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2816,
+        5216
+      ],
+      "id": "0e0c51d5-a44d-497f-8009-5c0eee8b720b",
+      "name": "HTTP Request20"
+    },
+    {
+      "parameters": {
+        "path": "8c450380-3c3a-4de5-a3e4-5d030687aa1f",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3040,
+        5216
+      ],
+      "id": "e52b57b6-10b5-49c5-a9a4-6e0929c22585",
+      "name": "Webhook7",
+      "webhookId": "8c450380-3c3a-4de5-a3e4-5d030687aa1f"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2560,
+        5216
+      ],
+      "id": "c0fe97ca-5889-40d9-8164-a89259ae81e7",
+      "name": "Respond to Webhook2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook5": {
+      "main": [
+        [
+          {
+            "node": "Checklist5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker5",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook6": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storage worker5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request20": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook7": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "02625337-d1bd-4b23-9179-db18d5714f10",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "457ea94463d0f435b86aa7c9b8cfc49bfcd8f052a7db1d1691ccd60f8c56047e"
+  },
+  "id": "8cJuumDQaDUH2EPB",
+  "tags": []
+}

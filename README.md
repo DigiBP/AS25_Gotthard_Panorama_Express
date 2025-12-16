@@ -18,6 +18,10 @@
   - [Users and Stakeholders](#users-and-stakeholders)
 - [Technologies Used](#technologies-used)
   - [Frontend Mockups](#frontend-mockups)
+- [Workflow Orchestration](#workflow-orchestration)
+  - [Camunda BPMN Engine](#camunda-bpmn-engine)
+  - [n8n Integration & AI Storage Worker](#n8n-integration--ai-storage-worker)
+  - [End-to-End Flow](#end-to-end-flow)
 - [Limitations](#limitations)
 
 ---
@@ -218,6 +222,194 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 - [ ] Inventory Management View
 - <del>[ ] User Profile/Settings<del> -> wasting time
 - [ ] Reports and Analytics
+
+[⬆️ Back to Top](#table-of-contents)
+
+---
+
+# Workflow Orchestration
+
+This section describes how the Camunda BPMN engine orchestrates the medication preparation workflow and how n8n bridges external systems and AI services to automate key decision points.
+
+## Camunda BPMN Engine
+
+**Camunda** is the central workflow orchestration engine that controls the entire medication preparation and stock management process.
+
+### Key Responsibilities:
+
+1. **Process Definition & Execution**
+   - Executes the TO-BE BPMN workflow model stored in Camunda
+   - Manages process instances for each medication order/preparation cycle
+   - Maintains process state and variable persistence
+
+2. **External Task Management**
+   - Delegates specific tasks to external workers (Python backend)
+   - Tasks are handled via a topic-based subscription model
+   - Workers communicate back to Camunda with task completion results
+
+3. **Process Instances**
+   - Can be started via REST API: `POST /engine-rest/process-definition/key/{processKey}/tenant-id/mi25gotthard/start`
+   - Variables (medication ID, amount, patient info) are passed as process variables
+   - Example start request:
+     ```json
+     {
+       "variables": {
+         "medication_id": {"value": "opioid-001", "type": "String"},
+         "medication_name": {"value": "fentanyl", "type": "String"},
+         "amount": {"value": 20, "type": "Integer"}
+       }
+     }
+     ```
+
+### Camunda Topics & Python Worker Handlers
+
+The Python backend (`worker.py`) subscribes to the following Camunda topics:
+
+| Topic                 | Handler Function           | Purpose                                                    |
+| --------------------- | -------------------------- | ---------------------------------------------------------- |
+| `inventory-check`     | `handle_inventory_check`   | Fetch current stock levels from backend database           |
+| `ai-check`            | `handle_ai_check`          | Query n8n/storage AI for medication availability & location |
+| `update-stock`        | `handle_update_stock`      | Update inventory after medication is dispensed             |
+| `create-order`        | `handle_create_order`      | Create a new order record in the backend database          |
+| `update-checklist`    | `handle_update_checklist`  | Update medication checklist after AI verification          |
+| `check-carts`         | `handle_check_carts`       | Query available medication preparation carts              |
+| `create-cart`         | `handle_create_cart`       | Create a new cart and populate with checklist items        |
+| `update-cart-status`  | `handle_update_cart_status`| Update cart status (e.g., "Prepared" → "In-Use")          |
+
+### Configuration
+
+- **Camunda Base URL:** `https://digibp.engine.martinlab.science/engine-rest`
+- **Tenant ID:** `mi25gotthard`
+- **Authentication:** Username: `mi25gotthard`, Password: `password`
+
+---
+
+## n8n Integration & AI Storage Worker
+
+**n8n** is a workflow automation platform that integrates with Camunda to handle AI-powered decisions and external system queries.
+
+### Architecture Overview
+
+n8n runs as a separate service and exposes webhook endpoints that Camunda's Python worker calls during the `ai-check` task. The n8n workflow orchestrates:
+
+1. **AI Storage Worker** (via OpenAI GPT-4 Mini)
+   - Receives medication inquiries (name, ID, required amount)
+   - Queries AI language model to simulate storage worker decision-making
+   - Determines if spare stock is available at alternative storage locations
+   - Returns structured JSON response with availability decision
+
+2. **Webhook-Based Communication**
+   - n8n exposes a webhook endpoint for incoming medication check requests
+   - Python worker sends POST request to n8n webhook with medication details
+   - n8n processes the request and responds with availability/location data
+
+### n8n Workflow Nodes
+
+The n8n workflow (`My workflow_v4.json`) contains the following key nodes:
+
+- **Webhook Receivers**
+  - `Webhook5`: Receives medication checklist initialization requests
+  - `Webhook6`: Receives medication availability queries from Python worker
+  - `Webhook7`: Receives cart status queries
+
+- **AI Processing**
+  - `OpenAI Chat Model5`: Integrates with OpenAI API for AI decision-making
+  - `AI Storage worker5`: LangChain agent that interprets AI responses
+  - `Structured Output Parser5`: Ensures responses conform to expected JSON schema
+
+- **HTTP Requests**
+  - Send requests to backend API endpoints for persisting data
+
+### n8n Endpoints
+
+| Webhook ID                           | Purpose                                |
+| ------------------------------------ | -------------------------------------- |
+| `04ced486-2466-431f-b1fd-ea604848459b` | Checklist initialization               |
+| `ea2b22f1-ce36-4988-8f59-f67b7ce05c6b` | Medication availability check (AI)     |
+| `8c450380-3c3a-4de5-a3e4-5d030687aa1f` | Cart information retrieval             |
+
+### Example AI Storage Worker Prompt
+
+```
+You are a storage worker. You receive an order for a medication that is not available and 
+you check other storage locations for spare stock.
+You must respond only with valid JSON that matches this structure, with no extra text, 
+explanations, or comments.
+
+If you find the requested amount, respond with:
+{"found": "Yes", "text": "Yes! We still have some left, I'll bring them by."}
+
+If you do not find the requested amount, respond with:
+{"found": "No", "text": "Sorry, we seem to not have any left, I'll order more."}
+```
+
+---
+
+## End-to-End Flow
+
+Here's how Camunda and n8n work together in a typical medication preparation scenario:
+
+```
+1. Process Start (Frontend/API)
+   └─→ POST /engine-rest/process-definition/key/Process_1gnj26y/start
+       Variables: medication_id, medication_name, amount, etc.
+
+2. Inventory Check Task (Camunda → Python Worker)
+   └─→ Camunda publishes "inventory-check" task
+       Python worker calls: GET /api/inventory/{medication_id}
+       Backend returns current stock level
+
+3. Decision: Is Stock Sufficient?
+   ├─→ YES: Proceed to create-cart
+   └─→ NO: Continue to AI check
+
+4. AI Check Task (Camunda → Python Worker → n8n)
+   └─→ Camunda publishes "ai-check" task
+       Python worker sends POST to n8n webhook: /webhook/ea2b22f1-ce36-4988-8f59-f67b7ce05c6b
+       Payload: {"medication_name": "...", "medication_id": "...", "amount": ...}
+       
+       n8n workflow executes:
+       ├─→ OpenAI Chat Model receives prompt with medication details
+       ├─→ LangChain agent interprets AI response
+       └─→ Structured Output Parser ensures valid JSON format
+       
+       n8n returns: {"found": "Yes/No", "text": "..."}
+       Python worker completes task with AI result
+
+5. Update Checklist (Camunda → Python Worker)
+   └─→ Camunda publishes "update-checklist" task
+       Python worker updates checklist item status based on AI result
+       Backend marks medication as "found" or "not found"
+
+6. Cart Management (Camunda → Python Worker)
+   ├─→ Create Cart: POST /api/carts/ with patient/operation info
+   ├─→ Add Items: POST /api/cart-items/ for each medication
+   └─→ Update Status: PATCH /api/carts/{id}/status to "In-Use"
+
+7. Order Creation (Camunda → Python Worker)
+   └─→ Camunda publishes "create-order" task
+       Python worker creates order record in backend
+       Order linked to medications and quantities needed
+
+8. Process Complete
+   └─→ Workflow terminates with final state (Success/Failure)
+```
+
+### Real-Time Frontend Notifications
+
+Throughout the workflow, the Python worker sends notifications to the frontend via the backend API:
+
+```python
+POST /api/notifications/workflow-event
+{
+  "event_type": "Bridge",
+  "message": "[Bridge] Asking AI/Storage about: fentanyl"
+}
+```
+
+This allows the frontend to display real-time workflow progress and status updates to users.
+
+---
 
 [⬆️ Back to Top](#table-of-contents)
 
