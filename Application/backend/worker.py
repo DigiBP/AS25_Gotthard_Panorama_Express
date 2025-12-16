@@ -5,7 +5,7 @@ import threading
 logging.basicConfig(level=logging.INFO)
 
 # Disable annoying Camunda worker logs
-logging.getLogger('camunda').setLevel(logging.WARNING)
+#logging.getLogger('camunda').setLevel(logging.WARNING)
 
 import requests
 from camunda.external_task.external_task import ExternalTask, TaskResult
@@ -116,7 +116,7 @@ def handle_ai_check(task: ExternalTask) -> TaskResult:
 
     try:
         # Send request to the specified webhook URL
-        webhook_url = "http://localhost:5678/webhook/04ced486-2466-431f-b1fd-ea604848459b"
+        webhook_url = "http://localhost:5678/webhook/ea2b22f1-ce36-4988-8f59-f67b7ce05c6b"
         payload = {
             "medication_name": name,
             "medication_id": med_id,
@@ -343,22 +343,36 @@ def handle_check_carts(task: ExternalTask) -> TaskResult:
 
     try:
         # Send GET request to the webhook (since POST is not registered)
-        webhook_url = "http://localhost:5678/webhook/d5de05e8-553c-4074-b5c7-498a949f33d3"
+        webhook_url = "http://localhost:5678/webhook/8c450380-3c3a-4de5-a3e4-5d030687aa1f"
         response = requests.get(webhook_url, timeout=30)  # Change to GET
 
         if response.status_code == 200:
             carts = response.json()
-            available = len(carts) > 0
-            logging.info(f"[DEBUG] Carts: {carts}, Available: {available}")
+            
+            # Normalize to list if it's a single dict
+            if isinstance(carts, dict):
+                carts = [carts]
+            elif not isinstance(carts, list):
+                return task.failure(
+                    error_message="Invalid carts response format",
+                    error_details="Expected list or dict",
+                    max_retries=0,
+                    retry_timeout=1000,
+                )
+            
+            # Filter for carts with status "Prepared"
+            prepared_carts = [cart for cart in carts if cart.get("status") == "Prepared"]
+            available = len(prepared_carts) > 0
+            logging.info(f"[DEBUG] Carts: {carts}, Prepared Carts: {prepared_carts}, Available: {available}")
             
             result = {
-                "carts": carts,
+                "carts": carts,  # Return all carts for reference
                 "available": available,
             }
             
-            # If available, include the cart_id of the first cart for update-cart-status
+            # If available, include the cart_id of the first prepared cart
             if available:
-                result["cart_id"] = carts[0]["id"]
+                result["cart_id"] = prepared_carts[0]["id"]
             
             return task.complete(result)
         else:
@@ -399,14 +413,14 @@ def handle_create_cart(task: ExternalTask) -> TaskResult:
 
     logging_to_frontend("Bridge", "Creating cart with checklist items")
 
-    # Create the cart with default data
+    # Create the cart with default data, ensuring fallbacks for None
     cart_data = {
-        "status": "Prepared",
-        "patientId": task.get_variable("patientId", "patient-123"),
-        "operation": task.get_variable("operation", "Medication Dispensing"),
-        "operationDate": task.get_variable("operationDate", "2025-12-15"),
-        "anaesthesiaType": task.get_variable("anaesthesiaType", "General"),
-        "roomNumber": task.get_variable("roomNumber", "OR-01"),
+        "status": "In-Use",
+        "patientId": task.get_variable("patientId") or "Unclaimed",
+        "operation": task.get_variable("operation") or "Undefined",
+        "operationDate": task.get_variable("operationDate") or "2025-12-15",
+        "anaesthesiaType": task.get_variable("anaesthesiaType") or "General",
+        "roomNumber": task.get_variable("roomNumber") or "Undefined",
     }
 
     try:
@@ -414,50 +428,40 @@ def handle_create_cart(task: ExternalTask) -> TaskResult:
         create_cart_response = requests.post(f"{BACKEND_API_URL}/carts", json=cart_data)
         if create_cart_response.status_code != 200:
             return task.failure(
-                error_message=f"Failed to create cart ({create_cart_response.status_code})",
+                error_message=f"Cart creation failed ({create_cart_response.status_code})",
                 error_details=create_cart_response.text,
                 max_retries=0,
                 retry_timeout=1000,
             )
-
+        
         cart = create_cart_response.json()
-        cart_id = cart["id"]
-
-        # Add checklist items as cart items (only if checked: true)
-        for item in checklist:
-            if not item.get("checked", False):
-                continue  # Skip unchecked items
-
-            medication_id = item["medication_id"]
-            amount = item["amount"]
-
-            # Fetch inventory_id for the medication
-            inventory_response = requests.get(f"{BACKEND_API_URL}/inventory/{medication_id}")
-            if inventory_response.status_code != 200:
-                logging.warning(f"Failed to fetch inventory for {medication_id}, skipping")
-                continue
-
-            inventory_list = inventory_response.json()
-            if not inventory_list:
-                logging.warning(f"No inventory found for {medication_id}, skipping")
-                continue
-
-            inventory_id = inventory_list[0]["id"]  # Use the first inventory item
-
-            # Add to cart using the correct endpoint
-            cart_item_data = {
-                "cart_id": cart_id,
-                "inventory_id": inventory_id,
-                "medication_id": medication_id,
-                "amount": amount,
-            }
-
-            add_item_response = requests.post(f"{BACKEND_API_URL}/cart-items/add", json=cart_item_data)
+        logging.info(f"[DEBUG] Created cart: {cart}")
+        
+        # Seed with requested medication
+        medication_id = task.get_variable("medication_id")
+        amount = task.get_variable("amount", 1)
+        if medication_id:
+            add_item_response = requests.post(
+                f"{BACKEND_API_URL}/cart-items",
+                json={"cartId": cart["id"], "medicationId": medication_id, "amount": amount}
+            )
             if add_item_response.status_code != 200:
-                logging.warning(f"Failed to add cart item for {medication_id}: {add_item_response.text}")
-                # Continue with other items instead of failing the whole task
-
-        return task.complete({"cart_id": cart_id})
+                logging.warning(f"Failed to add requested medication {medication_id}: {add_item_response.text}")
+        
+        # Seed with standard medications (update list as needed)
+        standard_medications = [
+            {"medicationId": "painkiller-001", "amount": 1},
+            {"medicationId": "antibiotic-001", "amount": 1},
+        ]
+        for item in standard_medications:
+            add_item_response = requests.post(
+                f"{BACKEND_API_URL}/cart-items",
+                json={"cartId": cart["id"], **item}
+            )
+            if add_item_response.status_code != 200:
+                logging.warning(f"Failed to add standard medication {item['medicationId']}: {add_item_response.text}")
+        
+        return task.complete({"cart": cart})
 
     except Exception as e:
         return task.failure(
@@ -523,9 +527,13 @@ def start_subscription(topic, handler, i):
         handler (function): The handler function for the topic.
         i (int): Worker index for unique worker ID.
     """
-    worker = ExternalTaskWorker(worker_id="python-worker-" + str(i), base_url=BASE_URL)
+    worker = ExternalTaskWorker(
+        worker_id="python-worker-" + str(i), 
+        base_url=BASE_URL,
+        config={'tenantId': 'mi25gotthard'}  # Set tenant here
+    )
     print(f"Listening for topic: {topic}")
-    worker.subscribe(topic, handler)
+    worker.subscribe(topic, handler)  # Remove tenant_id from subscribe
 
 
 def start_camunda_workers():

@@ -16,10 +16,12 @@ from Application.backend.routers import (
     frontend,
 )
 
+from Application.backend.worker import start_camunda_workers
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    start_camunda_workers()
     yield
 
 

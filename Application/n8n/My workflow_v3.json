@@ -1,0 +1,4218 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1968,
+        320
+      ],
+      "id": "87002953-9e87-46c0-a15e-bc688fcc66ac",
+      "name": "Webhook",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1632,
+        320
+      ],
+      "id": "c4e11648-626e-424b-80c0-d8ed4468480c",
+      "name": "Checklist"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/inventory/{{ $json.medication_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -624,
+        320
+      ],
+      "id": "31475fd6-89bf-4907-9b9d-3f3ab1720262",
+      "name": "Check minimum"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c0a03ce-6f7c-449b-b2fd-5ed0f3c53315",
+              "leftValue": "={{ $json.checked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1344,
+        320
+      ],
+      "id": "23c08e2c-871c-47cc-a78b-fac7bf731f8b",
+      "name": "stock missing?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"name\": \"{{ $json.name }}\",\n\"date\": \"{{ $json.date }}\",\n\"medications\": {{ JSON.stringify($json.medications) }},\n\"isInternal\": {{ $json.isInternal }},\n\"isRush\": {{ $json.isRush }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        528,
+        320
+      ],
+      "id": "681f8fbe-6241-4db2-b8e2-2f3fa68db748",
+      "name": "Create Order"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "170337f8-fc85-4887-a6a6-c6196af429a7",
+              "leftValue": "={{ $json.inventory_amount- $json.amount}}",
+              "rightValue": "={{ $json.min_stock }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -112,
+        688
+      ],
+      "id": "5debf196-026f-43ac-8c59-219cb8174351",
+      "name": "below minimum?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: items = inventory objects as shown\nconst inputItems = $input.all();\n\nconst today = new Date();\nconst dateStr = today.toISOString().slice(0, 10); // \"YYYY-MM-DD\"\n\n// Build medications array\nconst medications = inputItems\n  .filter(i => i.json.checked)\n  .map(i => {\n    const d = i.json;\n    const missing = d.min_stock - (d.inventory_amount - d.amount);\n    return {\n      medicationId: d.medicationId || d.medication_id,\n      amount: missing > 0 ? missing : 0,\n    };\n  })\n  // Optional: only keep meds where amount > 0\n  .filter(m => m.amount > 0);\n\nreturn [\n  {\n    json: {\n      name: \"Weekly Restock\",\n      date: dateStr,\n      medications,\n      isInternal: false,\n      isRush: true,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        480
+      ],
+      "id": "a6ea9bda-4114-4ec4-be2b-0e25470ddd22",
+      "name": "create order object"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/create",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1328,
+        784
+      ],
+      "id": "2b575737-a8d7-431f-b5c1-4d0cbe15e0ce",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "medicationId",
+              "field2": "medication_id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -256,
+        688
+      ],
+      "id": "f0cd5b62-51db-4b5a-b03b-fd5b4848d1d3",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        96
+      ],
+      "id": "5a2b6680-dc9b-4808-873a-f965714834b6",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -672,
+        96
+      ],
+      "id": "8d30090f-44e8-4247-b583-c2b08437e675",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b54423b-7204-4103-ba5d-ffb721680b21",
+              "leftValue": "={{ $json.output.found }}",
+              "rightValue": "No",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        208
+      ],
+      "id": "82c19480-517a-4500-bc2a-b766361950e0",
+      "name": "Found more?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1040,
+        320
+      ],
+      "id": "af4fce40-a7d3-43de-97f0-c8fb64e65463",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        96,
+        688
+      ],
+      "id": "afc1df01-c8d7-4bd3-a59e-b728409a8807",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/create",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e5f2cee1-9d4e-413b-9f12-7222a21e78b0",
+      "name": "Contact Storage"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// First item is LLM result\nconst llmItem = allItems[0];\nconst llmOutput = llmItem.json.output || llmItem.json;\nconst shouldSetTrue = llmOutput.found === \"Yes\";\n\n// Filter out the LLM item and update only medications where found === \"Yes\"\nconst meds = allItems.slice(1); // Skip first item (LLM)\n\nconst updatedMeds = meds.map(med => ({\n  json: {\n    ...med.json,\n    // ONLY set to true if found === \"Yes\", otherwise keep original checked value\n    checked: shouldSetTrue ? true : med.json.checked\n  }\n}));\n\nreturn updatedMeds;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        688
+      ],
+      "id": "fd013647-a688-4deb-a609-4cc724a6abd7",
+      "name": "update found status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple aggregation — keeps medication_id and amount from each incoming item\nconst items = $input.all();\n\nconst medications = items.map(i => ({\n  medicationId: i.json.medication_id || i.json.medicationId || '',\n  amount: -(i.json.amount !== undefined ? i.json.amount : 10) // fallback 10\n}));\n\nreturn [{\n  json: {\n    name: \"Weekly Restock\",\n    date: \"2025-12-01\",\n    medications,\n    isInternal: false,\n    isRush: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        64
+      ],
+      "id": "172c50c1-cda1-41a1-9b3b-ad56b47bd8e9",
+      "name": "map to order format"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ $json.medications[0].amount }} {{ $json.medications[0].medicationId }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -848,
+        -80
+      ],
+      "id": "9435d5cc-c365-471e-ad93-ac81a2ee1a8f",
+      "name": "AI Storage worker",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "inventory_amount"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        320
+      ],
+      "id": "dc4c2cf9-3648-4b36-ac1e-5a36087c2ace",
+      "name": "change variable name"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/carts/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        736,
+        512
+      ],
+      "id": "ac535d2c-d577-4b90-a4e2-12525ae70cb3",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "00615c4f-b3d3-4c45-8013-d8948cb93b6e",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Prepared",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        944,
+        368
+      ],
+      "id": "a3f5eda5-af13-4f89-8c23-73c6fdd9adb1",
+      "name": "Filter"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        512
+      ],
+      "id": "625c5824-e953-47bd-92f3-02636b4714c4",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/cart-items/cart/{{ $json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1536,
+        512
+      ],
+      "id": "00826d2f-bd8b-4562-8bde-dfe65c9bc5a2",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "query": "SELECT \n  input2.*,\n  input1.*\nFROM input2\nLEFT JOIN input1 ON input1.medication_id = input2.medication_id\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2304,
+        608
+      ],
+      "id": "0f03a959-680f-4f57-b593-4fcb14eaaef4",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "821f77a1-b29b-4359-9a64-020aeda2c822",
+              "leftValue": "={{ $json.cart_amount_available }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2496,
+        608
+      ],
+      "id": "bdbfa521-065e-4189-88eb-205236de5a0e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2448,
+        336
+      ],
+      "id": "580d666e-c310-4d13-890a-d66211e1a69f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:8000/api/cart-items/add",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "cart_id",
+              "value": "={{ $json.medications[0].cart_id }}"
+            },
+            {
+              "name": "medication_id",
+              "value": "={{ $json.medications[0].medicationId }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.medications[0].amount - $json.medications[0].cart_amount_available }}"
+            },
+            {
+              "name": "time_sensitive",
+              "value": "true"
+            },
+            {
+              "name": "inventory_id",
+              "value": "={{ $json.medications[0].inventory_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3568,
+        704
+      ],
+      "id": "5c814f83-51f0-457d-a0fc-48cb8cf5aab7",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2944,
+        768
+      ],
+      "id": "9496ed10-667b-487f-8438-db7f0a7825ba",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "cart_amount_available"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        512
+      ],
+      "id": "4e37b0ad-c93b-48bd-9a9b-aad486e740b8",
+      "name": "Rename Keys"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f45a1929-3048-45c5-81e7-703265385551",
+              "leftValue": "={{ $json.cart_amount_available }}",
+              "rightValue": "={{ $json.amount }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2768,
+        576
+      ],
+      "id": "1463fed4-c15b-4617-9d60-277c1c3cce74",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// Extract the JSON from each item\nconst meds = allItems.map(item => item.json);\n\n// Return ONE item with an object containing the full array\nreturn [\n  {\n    json: {\n      medications: meds\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        768
+      ],
+      "id": "8e7a4e77-217e-4d62-a137-07c67456df51",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "query": "SELECT * FROM input1 LEFT JOIN input2 ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2656,
+        800
+      ],
+      "id": "c5c24d6e-7e78-4ae0-81e3-5a73fcaeb1e7",
+      "name": "Merge5"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "id",
+              "newKey": "cart_id"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        512
+      ],
+      "id": "6e35db1a-e77e-457d-8ebf-5dfb47b42921",
+      "name": "Rename Keys1"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/inventory/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3296,
+        976
+      ],
+      "id": "d7da518f-6320-4409-bf27-a1e39e48132b",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2064,
+        1136
+      ],
+      "id": "77689ac7-e8d8-467a-a288-17ef87407c8d",
+      "name": "Webhook1",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1728,
+        1136
+      ],
+      "id": "b06bbf7a-af03-46d4-baa7-acb5d916f66e",
+      "name": "Checklist1"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/inventory",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1504,
+        992
+      ],
+      "id": "f8181449-fd67-4196-8312-02af60e49900",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "medication_id",
+              "field2": "medicationId"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1056,
+        1136
+      ],
+      "id": "6e73d3e9-b14b-4f0b-903a-ffd5f8b7dc23",
+      "name": "Merge6"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c0a03ce-6f7c-449b-b2fd-5ed0f3c53315",
+              "leftValue": "={{ $json.checked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -864,
+        976
+      ],
+      "id": "5db56e6c-6685-4af2-ba76-bc077c2636e7",
+      "name": "stock missing?1"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "inventory_amount"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        992
+      ],
+      "id": "f85eff21-5da4-4375-917b-6ccb364772d0",
+      "name": "Rename Keys2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "170337f8-fc85-4887-a6a6-c6196af429a7",
+              "leftValue": "={{ $json.inventory_amount- $json.amount}}",
+              "rightValue": "={{ $json.min_stock }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -352,
+        1200
+      ],
+      "id": "b5115f65-d042-471e-ac90-8f53f0717f82",
+      "name": "below minimum?1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ -$json.amount }} {{ $json.name }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        896
+      ],
+      "id": "d8eb1e05-1c37-4155-b4ae-80f386ff3ee9",
+      "name": "AI Storage worker1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -400,
+        768
+      ],
+      "id": "9365e95b-e95c-4b44-a1f5-ab822cfd4174",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        768
+      ],
+      "id": "bcf311b3-0b63-4dfc-838a-cc1fbd1b9aa4",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b54423b-7204-4103-ba5d-ffb721680b21",
+              "leftValue": "={{ $json.output.found }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        912
+      ],
+      "id": "3aff2901-7860-4c1c-b4ae-83e7e0fe40b3",
+      "name": "Found more?1"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "http://host.docker.internal:8000/api/inventory/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        400,
+        896
+      ],
+      "id": "5e79b777-7506-448a-9bdc-7665a8772fb1",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        880
+      ],
+      "id": "ba6eb853-2fc3-45b4-a790-bdcf82db3d8c",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// First item is LLM result\nconst llmItem = allItems[0];\nconst llmOutput = llmItem.json.output || llmItem.json;\nconst shouldSetTrue = llmOutput.found === \"Yes\";\n\n// Filter out the LLM item and update only medications where found === \"Yes\"\nconst meds = allItems.slice(1); // Skip first item (LLM)\n\nconst updatedMeds = meds.map(med => ({\n  json: {\n    ...med.json,\n    // ONLY set to true if found === \"Yes\", otherwise keep original checked value\n    checked: shouldSetTrue ? true : med.json.checked\n  }\n}));\n\nreturn updatedMeds;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        1200
+      ],
+      "id": "8cf2a8d5-eb15-4a3d-8d21-9f2515a8c5af",
+      "name": "update found status1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        144,
+        1184
+      ],
+      "id": "63eac342-5da9-4c5e-8ed8-252314d5b24d",
+      "name": "Merge7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all incoming items\nconst items = $input.all();\n\n// Extract the raw JSON array (your medications)\nconst checklistArray = items.map(item => item.json);\n\n// Return one object with key \"checklist\"\nreturn [\n  {\n    json: {\n      checklist: checklistArray,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        1152
+      ],
+      "id": "20b51561-e837-4265-8868-5029a99c7524",
+      "name": "convert to checklist JSON"
+    },
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2640,
+        1808
+      ],
+      "id": "2e5b2ef7-8aec-4d0d-aa0e-15386016f4df",
+      "name": "Webhook2",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2304,
+        1808
+      ],
+      "id": "e10ea4c9-0c99-4ea9-938a-263d53b31275",
+      "name": "Checklist2"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/inventory/{{ $json.medication_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1296,
+        1808
+      ],
+      "id": "bca0475e-27df-4c1b-b2f8-180882cf8ea9",
+      "name": "Check minimum1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c0a03ce-6f7c-449b-b2fd-5ed0f3c53315",
+              "leftValue": "={{ $json.checked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2016,
+        1808
+      ],
+      "id": "ba4cb4f8-4d6c-4919-a4fc-cca2721b114e",
+      "name": "stock missing?2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"name\": \"{{ $json.name }}\",\n\"date\": \"{{ $json.date }}\",\n\"medications\": {{ JSON.stringify($json.medications) }},\n\"isInternal\": {{ $json.isInternal }},\n\"isRush\": {{ $json.isRush }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -144,
+        1808
+      ],
+      "id": "1ee61ece-e689-42f7-aa15-6a376b7b07f5",
+      "name": "Create Order1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "170337f8-fc85-4887-a6a6-c6196af429a7",
+              "leftValue": "={{ $json.inventory_amount- $json.amount}}",
+              "rightValue": "={{ $json.min_stock }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -784,
+        2176
+      ],
+      "id": "38b06850-1009-4850-8a94-f46435a9e3dd",
+      "name": "below minimum?2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: items = inventory objects as shown\nconst inputItems = $input.all();\n\nconst today = new Date();\nconst dateStr = today.toISOString().slice(0, 10); // \"YYYY-MM-DD\"\n\n// Build medications array\nconst medications = inputItems\n  .filter(i => i.json.checked)\n  .map(i => {\n    const d = i.json;\n    const missing = d.min_stock - (d.inventory_amount - d.amount);\n    return {\n      medicationId: d.medicationId || d.medication_id,\n      amount: missing > 0 ? missing : 0,\n    };\n  })\n  // Optional: only keep meds where amount > 0\n  .filter(m => m.amount > 0);\n\nreturn [\n  {\n    json: {\n      name: \"Weekly Restock\",\n      date: dateStr,\n      medications,\n      isInternal: false,\n      isRush: true,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        1968
+      ],
+      "id": "344c6901-4010-4dbc-8171-4fab82003b74",
+      "name": "create order object1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/create",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        656,
+        2272
+      ],
+      "id": "75ccd7ba-4ec7-4870-8a2a-47a8ad6d3bf3",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "medicationId",
+              "field2": "medication_id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -928,
+        2176
+      ],
+      "id": "4fa34f1c-97de-4ef8-8720-86b0433a69a0",
+      "name": "Merge8"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1568,
+        1568
+      ],
+      "id": "b936ae08-ad1b-46ea-9563-b227eb819b25",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1344,
+        1568
+      ],
+      "id": "b93009a0-8c1d-4525-8285-ba3fbbf56806",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b54423b-7204-4103-ba5d-ffb721680b21",
+              "leftValue": "={{ $json.output.found }}",
+              "rightValue": "No",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        1680
+      ],
+      "id": "1c18b931-5fd1-4269-a970-db9648166150",
+      "name": "Found more?2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1712,
+        1808
+      ],
+      "id": "251c0567-5158-4f89-8465-8d27d230aa3e",
+      "name": "Merge9"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -576,
+        2176
+      ],
+      "id": "a049bd23-38d5-4a3f-9e13-2fbfd954fb2a",
+      "name": "Merge10"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/create",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -672,
+        1472
+      ],
+      "id": "ff6d84f0-5ef1-417c-9a29-0f38f2e2f177",
+      "name": "Contact Storage1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// First item is LLM result\nconst llmItem = allItems[0];\nconst llmOutput = llmItem.json.output || llmItem.json;\nconst shouldSetTrue = llmOutput.found === \"Yes\";\n\n// Filter out the LLM item and update only medications where found === \"Yes\"\nconst meds = allItems.slice(1); // Skip first item (LLM)\n\nconst updatedMeds = meds.map(med => ({\n  json: {\n    ...med.json,\n    // ONLY set to true if found === \"Yes\", otherwise keep original checked value\n    checked: shouldSetTrue ? true : med.json.checked\n  }\n}));\n\nreturn updatedMeds;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        2176
+      ],
+      "id": "f1f5f8eb-832c-443f-b712-01706dc3ef54",
+      "name": "update found status2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple aggregation — keeps medication_id and amount from each incoming item\nconst items = $input.all();\n\nconst medications = items.map(i => ({\n  medicationId: i.json.medication_id || i.json.medicationId || '',\n  amount: -(i.json.amount !== undefined ? i.json.amount : 10) // fallback 10\n}));\n\nreturn [{\n  json: {\n    name: \"Weekly Restock\",\n    date: \"2025-12-01\",\n    medications,\n    isInternal: false,\n    isRush: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        1536
+      ],
+      "id": "8e516693-4e40-4fee-ad69-d03cab9fd823",
+      "name": "map to order format1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ $json.medications[0].amount }} {{ $json.medications[0].medicationId }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1520,
+        1392
+      ],
+      "id": "1c067f8d-eab7-4905-98b4-eb09e2572bfd",
+      "name": "AI Storage worker2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "inventory_amount"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        1808
+      ],
+      "id": "372fbfbf-97f7-48bb-bf9c-d1d84ac75521",
+      "name": "change variable name1"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/carts/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        144,
+        1984
+      ],
+      "id": "c6753801-5653-4047-8ff2-0c773bfc86fe",
+      "name": "HTTP Request8"
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "query": "SELECT \n  input2.*,\n  input1.*\nFROM input2\nLEFT JOIN input1 ON input1.medication_id = input2.medication_id\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1632,
+        2096
+      ],
+      "id": "c71e161a-e98d-4623-a97b-b92a092b8d3e",
+      "name": "Merge11"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aaf8393e-3d8d-47a7-9b56-26a2c1d1b87c",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -2352,
+        2784
+      ],
+      "id": "b56c0c23-77d4-48a1-99eb-37c6f7a8d805",
+      "name": "Filter1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/notifications/workflow-event",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_type\": \"Storage Response\",  \n  \"message\": \"{{ $json.output.text }}\"  \n          \n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -832,
+        2592
+      ],
+      "id": "4f195fad-34ca-4848-80f0-c207bafedfd2",
+      "name": "HTTP Request9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.medications[0].name }}\",\n  \"date\": \"{{ $json.date }}\",\n  \"medications\": {{ JSON.stringify($json.medications) }},\n  \"isInternal\": {{ $json.isInternal }},\n  \"isRush\": {{$json.isRush }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -160,
+        3072
+      ],
+      "id": "0b64bf95-1e41-43b1-a6bd-ff1e6e5e79a3",
+      "name": "Create Order2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: items = inventory objects as shown\nconst inputItems = $input.all();\n\nconst today = new Date();\nconst dateStr = today.toISOString().slice(0, 10); // \"YYYY-MM-DD\"\n\n// Build medications array\nconst medications = inputItems\n  .map(i => {\n    const d = i.json;\n    const missing = d.min_stock - (d.inventory_amount - Math.abs(d.amount));\n    return {\n      medicationId: d.medicationId || d.medication_id,\n   name: d.name,\n      amount: missing > 0 ? missing : 0,\n    };\n  })\n  // Optional: only keep meds where amount > 0\n\n\nreturn [\n  {\n    json: {\n      name: \"Weekly Restock\",\n      date: dateStr,\n      medications,\n      isInternal: false,\n      isRush: true,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        3072
+      ],
+      "id": "585de21c-3add-40a5-8dbf-735d41cd0c14",
+      "name": "create order object2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/notifications/workflow-event",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_type\": \"Order Created\",  \n  \"message\": \"An order for {{ $json.medications[0].amount }} {{ $json.medications[0].name }} has been created on {{ $json.date }}\"  \n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        80,
+        3072
+      ],
+      "id": "f2889c41-d66b-49bd-aec5-0c26de170b3d",
+      "name": "HTTP Request10"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -656,
+        3008
+      ],
+      "id": "56fad65f-4dd1-4b30-a680-90d62efc3d27",
+      "name": "Merge13"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://host.docker.internal:8000/api/inventory/ {{ $('stock missing?4').item.json.id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inventory_id",
+              "value": "={{ $('stock missing?4').item.json.id }}"
+            },
+            {
+              "name": "new_amount",
+              "value": "={{ $('stock missing?4').item.json.min_stock }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -320,
+        2736
+      ],
+      "id": "ebc87817-6571-4a4c-b92c-74f7bb085162",
+      "name": "Update DB Amount"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/notifications/workflow-event",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_type\": \"Concacting Storage\",  \n  \"message\": \"Hey! We are looking for {{ -$json.amount }}  {{ $json.name }} can you check if there is any left somewhere?\"  \n          \n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1520,
+        2608
+      ],
+      "id": "8e943818-5270-4298-9257-bf4753abdc60",
+      "name": "HTTP Request11"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1472,
+        2864
+      ],
+      "id": "2ef1b521-0d43-4801-aa69-8f2e5d329660",
+      "name": "Wait",
+      "webhookId": "91399d9b-f397-4054-97a3-f1d08c801aa6"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.items }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        656,
+        3408
+      ],
+      "id": "e1acacd5-e224-4924-ab72-661c53ea4fbf",
+      "name": "HTTP Request12"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/notifications/workflow-event",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_type\": \"Checklist updated!\",  \n  \"message\": \"{{ $json.status }}\"  \n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        848,
+        3232
+      ],
+      "id": "90889b4d-f71c-4b22-8573-b0c0c7783ad5",
+      "name": "HTTP Request13"
+    },
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3248,
+        784
+      ],
+      "id": "18c06a66-228b-4483-9cf9-f9f43f351bd8",
+      "name": "Webhook3",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2912,
+        784
+      ],
+      "id": "6d36dfbe-5b17-49cd-80f1-6d7cbb888bc9",
+      "name": "Checklist3"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/inventory/{{ $json.medication_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1904,
+        784
+      ],
+      "id": "20d96520-2ba0-4503-88fc-29dff8895325",
+      "name": "Check minimum2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c0a03ce-6f7c-449b-b2fd-5ed0f3c53315",
+              "leftValue": "={{ $json.checked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2624,
+        784
+      ],
+      "id": "9f26d379-e77e-4064-a88b-32c381655d73",
+      "name": "stock missing?3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"name\": \"{{ $json.name }}\",\n\"date\": \"{{ $json.date }}\",\n\"medications\": {{ JSON.stringify($json.medications) }},\n\"isInternal\": {{ $json.isInternal }},\n\"isRush\": {{ $json.isRush }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        784
+      ],
+      "id": "e293749f-23bf-4655-8912-adb5c2429450",
+      "name": "Create Order3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "170337f8-fc85-4887-a6a6-c6196af429a7",
+              "leftValue": "={{ $json.inventory_amount- $json.amount}}",
+              "rightValue": "={{ $json.min_stock }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1392,
+        1152
+      ],
+      "id": "08f775a3-f895-4794-9a1c-54d765404c85",
+      "name": "below minimum?3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: items = inventory objects as shown\nconst inputItems = $input.all();\n\nconst today = new Date();\nconst dateStr = today.toISOString().slice(0, 10); // \"YYYY-MM-DD\"\n\n// Build medications array\nconst medications = inputItems\n  .filter(i => i.json.checked)\n  .map(i => {\n    const d = i.json;\n    const missing = d.min_stock - (d.inventory_amount - d.amount);\n    return {\n      medicationId: d.medicationId || d.medication_id,\n      amount: missing > 0 ? missing : 0,\n    };\n  })\n  // Optional: only keep meds where amount > 0\n  .filter(m => m.amount > 0);\n\nreturn [\n  {\n    json: {\n      name: \"Weekly Restock\",\n      date: dateStr,\n      medications,\n      isInternal: false,\n      isRush: true,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        944
+      ],
+      "id": "edbfe94c-8dac-464c-9b1a-b6ce307e73d4",
+      "name": "create order object3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/checklist/create",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -160,
+        1152
+      ],
+      "id": "da8697f9-0ba4-47fb-b6b4-33d64cd3a12d",
+      "name": "HTTP Request14"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "medicationId",
+              "field2": "medication_id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1536,
+        1152
+      ],
+      "id": "62a5d2f7-54d4-40d7-ae16-316d7701aac0",
+      "name": "Merge12"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -2048,
+        624
+      ],
+      "id": "e03a161a-868f-44f9-8f59-5b418ac02346",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1904,
+        624
+      ],
+      "id": "5a2081c5-3712-4c9d-a560-4a2856850aa9",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b54423b-7204-4103-ba5d-ffb721680b21",
+              "leftValue": "={{ $json.output.found }}",
+              "rightValue": "No",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1280,
+        672
+      ],
+      "id": "912b8506-9b96-4dc9-b489-01357c54f9d8",
+      "name": "Found more?3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2320,
+        784
+      ],
+      "id": "39293bda-5f50-4a3d-aa44-c54e02090982",
+      "name": "Merge14"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1184,
+        1152
+      ],
+      "id": "86e87d29-64bd-4c48-b739-a16555dc6ad9",
+      "name": "Merge15"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/checklist/create",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1280,
+        432
+      ],
+      "id": "bae91ba3-59c8-4db0-88ba-56992e5b86f6",
+      "name": "Contact Storage2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// First item is LLM result\nconst llmItem = allItems[0];\nconst llmOutput = llmItem.json.output || llmItem.json;\nconst shouldSetTrue = llmOutput.found === \"Yes\";\n\n// Filter out the LLM item and update only medications where found === \"Yes\"\nconst meds = allItems.slice(1); // Skip first item (LLM)\n\nconst updatedMeds = meds.map(med => ({\n  json: {\n    ...med.json,\n    // ONLY set to true if found === \"Yes\", otherwise keep original checked value\n    checked: shouldSetTrue ? true : med.json.checked\n  }\n}));\n\nreturn updatedMeds;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        1152
+      ],
+      "id": "b8125ec8-ca17-47d5-bbcf-f01b957e342a",
+      "name": "update found status3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple aggregation — keeps medication_id and amount from each incoming item\nconst items = $input.all();\n\nconst medications = items.map(i => ({\n  medicationId: i.json.medication_id || i.json.medicationId || '',\n  amount: -(i.json.amount !== undefined ? i.json.amount : 10) // fallback 10\n}));\n\nreturn [{\n  json: {\n    name: \"Weekly Restock\",\n    date: \"2025-12-01\",\n    medications,\n    isInternal: false,\n    isRush: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2400,
+        528
+      ],
+      "id": "17c7d820-e6cc-4b2c-9b6a-5e6686ea425c",
+      "name": "map to order format2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ $json.medications[0].amount }} {{ $json.medications[0].medicationId }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -2048,
+        432
+      ],
+      "id": "a6f17b8a-5992-4cb2-bf11-4771abbac320",
+      "name": "AI Storage worker3"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "inventory_amount"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        -1712,
+        784
+      ],
+      "id": "83a89210-7fbf-418e-8f04-649db055ca96",
+      "name": "change variable name2"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/medications",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1072,
+        1408
+      ],
+      "id": "4f63f908-2217-49de-8123-b212d7535b0a",
+      "name": "HTTP Request15"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "medicationId",
+              "field2": "medicationId"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -624,
+        1152
+      ],
+      "id": "2c802cc0-34f4-4457-b6a2-08dfa17a9df4",
+      "name": "Merge16"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "00615c4f-b3d3-4c45-8013-d8948cb93b6e",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Prepared",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        1856
+      ],
+      "id": "d70a8268-d2f6-422b-9588-e78299f8c94a",
+      "name": "Filter2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        448,
+        2000
+      ],
+      "id": "4b12f94e-3f9d-4465-9abe-4ff26720e552",
+      "name": "Limit2"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8000/api/cart-items/cart/{{ $json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        864,
+        2000
+      ],
+      "id": "2fceb76d-fef5-4006-ad50-8244a3bf5156",
+      "name": "HTTP Request16"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "821f77a1-b29b-4359-9a64-020aeda2c822",
+              "leftValue": "={{ $json.cart_amount_available }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1824,
+        2096
+      ],
+      "id": "7b288399-d0c5-462c-8478-2b2200987f47",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1776,
+        1824
+      ],
+      "id": "bfd7edac-1152-48ee-9d36-d1233c8c22c4",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:8000/api/cart-items/add",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "cart_id",
+              "value": "={{ $json.medications[0].cart_id }}"
+            },
+            {
+              "name": "medication_id",
+              "value": "={{ $json.medications[0].medicationId }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ $json.medications[0].amount - $json.medications[0].cart_amount_available }}"
+            },
+            {
+              "name": "time_sensitive",
+              "value": "true"
+            },
+            {
+              "name": "inventory_id",
+              "value": "={{ $json.medications[0].inventory_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2896,
+        2192
+      ],
+      "id": "d878d398-d574-4e35-8842-a1905bc14ba8",
+      "name": "HTTP Request17"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2272,
+        2256
+      ],
+      "id": "64d97d0d-1258-43ee-a335-968d18b2b87c",
+      "name": "Merge17"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "cart_amount_available"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        2000
+      ],
+      "id": "1dae3263-a92a-4055-82f5-4106c9516b87",
+      "name": "Rename Keys3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f45a1929-3048-45c5-81e7-703265385551",
+              "leftValue": "={{ $json.cart_amount_available }}",
+              "rightValue": "={{ $json.amount }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2096,
+        2064
+      ],
+      "id": "a68e9fb2-4382-40bd-94e2-debc838c0afa",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// Extract the JSON from each item\nconst meds = allItems.map(item => item.json);\n\n// Return ONE item with an object containing the full array\nreturn [\n  {\n    json: {\n      medications: meds\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        2256
+      ],
+      "id": "bd401bae-6a7f-4ebf-b130-c34337065f85",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "query": "SELECT * FROM input1 LEFT JOIN input2 ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1984,
+        2288
+      ],
+      "id": "50a3294f-646a-4f23-9c43-74973e8b35b1",
+      "name": "Merge18"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "id",
+              "newKey": "cart_id"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        736,
+        2000
+      ],
+      "id": "3d6da5fc-db01-49b8-ae09-23f89ef0b389",
+      "name": "Rename Keys4"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/inventory/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2624,
+        2464
+      ],
+      "id": "19f12a4a-ac21-4a89-8aab-46886edc2b8a",
+      "name": "HTTP Request18"
+    },
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2944,
+        3408
+      ],
+      "id": "4de441b0-d05f-400c-8c3f-07dc12965388",
+      "name": "Webhook4",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2544,
+        3520
+      ],
+      "id": "04f025bb-e178-49de-926e-589e6be7a00d",
+      "name": "Checklist4"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/inventory",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2352,
+        3296
+      ],
+      "id": "2e874cd4-5b56-4275-8b58-e39eb4458797",
+      "name": "HTTP Request19"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "medicationId",
+              "field2": "medication_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1904,
+        3440
+      ],
+      "id": "3ba1eb0f-b169-4e9c-96f7-98757671e9c5",
+      "name": "Merge19"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8c0a03ce-6f7c-449b-b2fd-5ed0f3c53315",
+              "leftValue": "={{ $json.checked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1680,
+        3296
+      ],
+      "id": "db34ccac-4199-4bb7-a29c-6bb461f7f751",
+      "name": "stock missing?4"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "amount",
+              "newKey": "inventory_amount"
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        -2144,
+        3296
+      ],
+      "id": "99d056f2-17f4-4ee0-aec3-5ec6a6ffddd9",
+      "name": "Rename Keys5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "170337f8-fc85-4887-a6a6-c6196af429a7",
+              "leftValue": "={{ $json.inventory_amount- $json.amount}}",
+              "rightValue": "={{ $json.min_stock }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1136,
+        3424
+      ],
+      "id": "9ae48652-847a-4bd5-a608-b687d2a2df92",
+      "name": "below minimum?4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ -$json.amount }} {{ $json.name }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1200,
+        2768
+      ],
+      "id": "31b6cdcd-8fad-49eb-9c00-95ab358c71a5",
+      "name": "AI Storage worker4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1232,
+        2608
+      ],
+      "id": "65e5679a-0f45-46b4-9269-3e8d19f7ec03",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1088,
+        2608
+      ],
+      "id": "061bcf81-19d7-4641-93e9-e76a9bb15ba1",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b54423b-7204-4103-ba5d-ffb721680b21",
+              "leftValue": "={{ $json.output.found }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -864,
+        2768
+      ],
+      "id": "c3905de2-766c-4584-af2b-148c1b35f613",
+      "name": "Found more?4",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -1792,
+        2896
+      ],
+      "id": "aa87dfb6-3080-4111-804b-427e050dccce",
+      "name": "Limit3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\nconst shouldSetTrue = true;\n\n// Update medications and extract only needed fields for API\nconst updatedMeds = allItems.map(med => ({\n  checked: shouldSetTrue ? true : med.json.checked,\n  name: med.json.name,\n  location: med.json.location,\n  amount: med.json.amount,\n  medicationId: med.json.medicationId || med.json.medication_id,\n}));\n\n// Return as SINGLE object containing the array\nreturn {\n  json: {\n    items: updatedMeds\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        3408
+      ],
+      "id": "80f1c335-f9d2-4ea7-bf88-e1401091e907",
+      "name": "update found status4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        160,
+        3408
+      ],
+      "id": "2be4c50c-75d9-46df-91d4-72dba896a177",
+      "name": "Merge20"
+    },
+    {
+      "parameters": {
+        "path": "04ced486-2466-431f-b1fd-ea604848459b",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2848,
+        4096
+      ],
+      "id": "f6570577-7197-48f2-aaca-3b678214fce5",
+      "name": "Webhook5",
+      "webhookId": "04ced486-2466-431f-b1fd-ea604848459b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/checklist/",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "[\n  {\n    \"checked\": false,\n    \"name\": \"lidocaine\",\n    \"location\": \"Cabinet A1\",\n    \"amount\": 20\n  },\n  {\n    \"checked\": false,\n    \"name\": \"propofol\",\n    \"location\": \"Cabinet I2\",\n    \"amount\": 10\n  },\n  {\n    \"checked\": false,\n    \"name\": \"fentanyl\",\n    \"location\": \"Specialbox Opioids\",\n    \"amount\": 1\n  },\n  {\n    \"checked\": false,\n    \"name\": \"paracetamol\",\n    \"location\": \"Shelf B3\",\n    \"amount\": 8\n  },\n  {\n    \"checked\": false,\n    \"name\": \"phenylephrine\",\n    \"location\": \"Resus Trolley\",\n    \"amount\": 1\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2640,
+        4096
+      ],
+      "id": "0590113e-c4f8-40f8-991b-80886b5e3b94",
+      "name": "Checklist5"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2432,
+        4096
+      ],
+      "id": "cd3a0ca5-01c9-4604-b31f-8858dfd7177a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Hi, we are missing {{ -$json.amount }} {{ $json.name }}, do you have any spare?\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "\n\n    You are a storage worker. You receive an order for a medication that is not available and you check other storage locations for spare stock.\n    You must respond only with valid JSON that matches this structure, with no extra text, explanations, or comments.\n\n        If you find the requested amount, respond with:\n        {\"found\": \"Yes\", \"text\": \"Yes! We still have some left, I'll bring them by.\"} (or a similar short confirmation in the text field).\n\n        If you do not find the requested amount, respond with:\n        {\"found\": \"No\", \"text\": \"Sorry, we seem to not have any left, I'll order more.\"} (or a similar short apology in the text field).\n        Do not include code fences, markdown, or any additional fields. The answer must be exactly one JSON object.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -2560,
+        4784
+      ],
+      "id": "b87b9a07-a235-4711-8785-bb2fc46644ac",
+      "name": "AI Storage worker5"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -2592,
+        4624
+      ],
+      "id": "e03281f1-086a-4b7b-ae13-4302902310b4",
+      "name": "OpenAI Chat Model5",
+      "credentials": {
+        "openAiApi": {
+          "id": "u2wlZOAuh10lIVKZ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"found\": \"Yes\",\n  \"text\": \"Yes! We still have some left, I'll bring them by.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2448,
+        4624
+      ],
+      "id": "ac21d1c1-2ba7-45c6-8455-885527a9ab38",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ea2b22f1-ce36-4988-8f59-f67b7ce05c6b",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        4832
+      ],
+      "id": "ffaa367f-ae19-4789-b682-54804390c644",
+      "name": "Webhook6",
+      "webhookId": "ea2b22f1-ce36-4988-8f59-f67b7ce05c6b"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2208,
+        4784
+      ],
+      "id": "aef0c4c1-103e-43d9-bc5e-13836e52c749",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/api/carts/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2816,
+        5216
+      ],
+      "id": "0e0c51d5-a44d-497f-8009-5c0eee8b720b",
+      "name": "HTTP Request20"
+    },
+    {
+      "parameters": {
+        "path": "8c450380-3c3a-4de5-a3e4-5d030687aa1f",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3040,
+        5216
+      ],
+      "id": "e52b57b6-10b5-49c5-a9a4-6e0929c22585",
+      "name": "Webhook7",
+      "webhookId": "8c450380-3c3a-4de5-a3e4-5d030687aa1f"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2560,
+        5216
+      ],
+      "id": "c0fe97ca-5889-40d9-8164-a89259ae81e7",
+      "name": "Respond to Webhook2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Checklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist": {
+      "main": [
+        [
+          {
+            "node": "stock missing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stock missing?": {
+      "main": [
+        [
+          {
+            "node": "map to order format",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Check minimum": {
+      "main": [
+        [
+          {
+            "node": "change variable name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "below minimum?": {
+      "main": [
+        [
+          {
+            "node": "create order object",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "create order object": {
+      "main": [
+        [
+          {
+            "node": "Create Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "below minimum?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found more?": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Check minimum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "update found status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update found status": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "map to order format": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storage worker": {
+      "main": [
+        [
+          {
+            "node": "Found more?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contact Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "change variable name": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rename Keys1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Rename Keys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename Keys": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge5": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Rename Keys1": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Checklist1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist1": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "Rename Keys2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "stock missing?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename Keys2": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "stock missing?1": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "below minimum?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storage worker1": {
+      "main": [
+        [
+          {
+            "node": "Found more?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found more?1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "below minimum?1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge7",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge7": {
+      "main": [
+        [
+          {
+            "node": "update found status1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "convert to checklist JSON": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook2": {
+      "main": [
+        [
+          {
+            "node": "Checklist2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist2": {
+      "main": [
+        [
+          {
+            "node": "stock missing?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check minimum1": {
+      "main": [
+        [
+          {
+            "node": "change variable name1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stock missing?2": {
+      "main": [
+        [
+          {
+            "node": "map to order format1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge9",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "below minimum?2": {
+      "main": [
+        [
+          {
+            "node": "create order object1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge10",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "create order object1": {
+      "main": [
+        [
+          {
+            "node": "Create Order1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge8": {
+      "main": [
+        [
+          {
+            "node": "below minimum?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker2",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found more?2": {
+      "main": [
+        [
+          {
+            "node": "Merge10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Order1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge9": {
+      "main": [
+        [
+          {
+            "node": "Merge8",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Check minimum1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge10": {
+      "main": [
+        [
+          {
+            "node": "update found status2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update found status2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge11",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "map to order format1": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storage worker2": {
+      "main": [
+        [
+          {
+            "node": "Found more?2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contact Storage1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "change variable name1": {
+      "main": [
+        [
+          {
+            "node": "Merge8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request8": {
+      "main": [
+        [
+          {
+            "node": "Filter2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge11": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Order2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create order object2": {
+      "main": [
+        [
+          {
+            "node": "Create Order2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge13": {
+      "main": [
+        [
+          {
+            "node": "create order object2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request12": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook3": {
+      "main": [
+        [
+          {
+            "node": "Checklist3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist3": {
+      "main": [
+        [
+          {
+            "node": "stock missing?3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check minimum2": {
+      "main": [
+        [
+          {
+            "node": "change variable name2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stock missing?3": {
+      "main": [
+        [
+          {
+            "node": "map to order format2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge14",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge14",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "below minimum?3": {
+      "main": [
+        [
+          {
+            "node": "create order object3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge15",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "create order object3": {
+      "main": [
+        [
+          {
+            "node": "Create Order3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge12": {
+      "main": [
+        [
+          {
+            "node": "below minimum?3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker3",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found more?3": {
+      "main": [
+        [
+          {
+            "node": "Merge15",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Order3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge14": {
+      "main": [
+        [
+          {
+            "node": "Merge12",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Check minimum2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge15": {
+      "main": [
+        [
+          {
+            "node": "update found status3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update found status3": {
+      "main": [
+        [
+          {
+            "node": "Merge16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "map to order format2": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storage worker3": {
+      "main": [
+        [
+          {
+            "node": "Found more?3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Contact Storage2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "change variable name2": {
+      "main": [
+        [
+          {
+            "node": "Merge12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request15": {
+      "main": [
+        [
+          {
+            "node": "Merge16",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge16": {
+      "main": [
+        [
+          {
+            "node": "convert to checklist JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter2": {
+      "main": [
+        [
+          {
+            "node": "Limit2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request16",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rename Keys4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request16": {
+      "main": [
+        [
+          {
+            "node": "Rename Keys3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge17": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename Keys3": {
+      "main": [
+        [
+          {
+            "node": "Merge11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Merge17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request17",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge18": {
+      "main": [
+        [
+          {
+            "node": "Merge17",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Rename Keys4": {
+      "main": [
+        [
+          {
+            "node": "Merge18",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook4": {
+      "main": [
+        [
+          {
+            "node": "Checklist4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist4": {
+      "main": [
+        [
+          {
+            "node": "Merge19",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request19": {
+      "main": [
+        [
+          {
+            "node": "Rename Keys5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge19": {
+      "main": [
+        [
+          {
+            "node": "stock missing?4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "stock missing?4": {
+      "main": [
+        [
+          {
+            "node": "Limit3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge13",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "below minimum?4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename Keys5": {
+      "main": [
+        [
+          {
+            "node": "Merge19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "below minimum?4": {
+      "main": [
+        [
+          {
+            "node": "Merge20",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "create order object2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge20",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Storage worker4": {
+      "main": [
+        [
+          {
+            "node": "Found more?4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker4",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found more?4": {
+      "main": [
+        [
+          {
+            "node": "Update DB Amount",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge20",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update found status4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge20": {
+      "main": [
+        [
+          {
+            "node": "update found status4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook5": {
+      "main": [
+        [
+          {
+            "node": "Checklist5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checklist5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Storage worker5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Storage worker5",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook6": {
+      "main": [
+        [
+          {
+            "node": "AI Storage worker5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Storage worker5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request20": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook7": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8660459a-614a-4216-8826-4f1bb8dc611e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "457ea94463d0f435b86aa7c9b8cfc49bfcd8f052a7db1d1691ccd60f8c56047e"
+  },
+  "id": "8cJuumDQaDUH2EPB",
+  "tags": []
+}
