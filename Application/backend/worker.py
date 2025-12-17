@@ -185,7 +185,7 @@ def handle_ai_check(task: ExternalTask) -> TaskResult:
         )
 
 
-# Topic: update-stock NOT IN USE
+# Topic: update-stock
 def handle_update_stock(task: ExternalTask) -> TaskResult:
     """
     Handles the 'update-stock' topic from Camunda.

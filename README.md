@@ -33,7 +33,7 @@
 | --------- | ------------------------- | ---------------------------------------- |
 | Janosh    | BPMN and Backend          | janosh.werlen@students.fhnw.ch           |
 | Dj        | Data Specialist / Backend | djordji.pavloski@students.fhnw.ch        |
-| Merel     | APIs and Frontend         | annemerel.dejong@students.fhnw.ch       |
+| Merel     | APIs and Frontend         | annemerel.dejong@students.fhnw.ch        |
 | Donna     | Medical Expert            | donna.tennigkeit@students.fhnw.ch        |
 | Viktorija | Medical Expert            | viktorija.kenstaviciute@students.fhnw.ch |
 
@@ -171,35 +171,38 @@ The TO-BE workflow follows a structured sequence:
 
 1. **Medication preparation**  
    Medication is prepared according to standardized steps and documented digitally to ensure clarity and traceability.
-   After the procedure, the medication status is explicitly evaluated: 
-      - fully used 
-      - partially used and eligible for storage 
-      - or discarded
+   After the procedure, the medication status is explicitly evaluated:
+
+   - fully used
+   - partially used and eligible for storage
+   - or discarded
 
    This decision is captured in the workflow and determines the subsequent process path.
 
 2. **Medication Usage and Post-Procedure Handling**  
    If medication is **fully used**, the process continues with documentation and closes the preparation cycle.
-   If medication is **partially used**, the workflow guides the user to: 
-      - document remaining quantity 
-      - decide on storage eligibility 
-      - and assign a storage location
+   If medication is **partially used**, the workflow guides the user to:
+
+   - document remaining quantity
+   - decide on storage eligibility
+   - and assign a storage location
 
    Discarded medication is recorded accordingly to maintain transparency and accountability.
 
 3. **Storage and availability Management**  
    Stored medication becomes visible within the system as available stock.  
-   The TO-BE process ensures that: 
-      - storage locations are documented 
-      - available quantities are updated
+   The TO-BE process ensures that:
+
+   - storage locations are documented
+   - available quantities are updated
 
 4. **Restocking and coordination**  
-   The TO-BE process explicitly models interactions between: 
-      - anaesthesia staff (preparation and usage)
-      - storage workers (availability and restocking)
-      - and system-supported documentation steps.
+   The TO-BE process explicitly models interactions between:
+   - anaesthesia staff (preparation and usage)
+   - storage workers (availability and restocking)
+   - and system-supported documentation steps.
 
-By making responsibilities and handovers explicit, the process reduces ambiguity, interruptions, and information loss.
+The TO-BE process digitalises documentation, coordination, decision points, and inventory visibility, while deliberately leaving physical preparation and clinical judgment manual.
 
 ---
 
@@ -237,11 +240,13 @@ This section describes how the Camunda BPMN engine orchestrates the medication p
 ### Key Responsibilities:
 
 1. **Process Definition & Execution**
+
    - Executes the TO-BE BPMN workflow model stored in Camunda
    - Manages process instances for each medication order/preparation cycle
    - Maintains process state and variable persistence
 
 2. **External Task Management**
+
    - Delegates specific tasks to external workers (Python backend)
    - Tasks are handled via a topic-based subscription model
    - Workers communicate back to Camunda with task completion results
@@ -253,9 +258,9 @@ This section describes how the Camunda BPMN engine orchestrates the medication p
      ```json
      {
        "variables": {
-         "medication_id": {"value": "opioid-001", "type": "String"},
-         "medication_name": {"value": "fentanyl", "type": "String"},
-         "amount": {"value": 20, "type": "Integer"}
+         "medication_id": { "value": "opioid-001", "type": "String" },
+         "medication_name": { "value": "fentanyl", "type": "String" },
+         "amount": { "value": 20, "type": "Integer" }
        }
      }
      ```
@@ -264,16 +269,16 @@ This section describes how the Camunda BPMN engine orchestrates the medication p
 
 The Python backend (`worker.py`) subscribes to the following Camunda topics:
 
-| Topic                 | Handler Function           | Purpose                                                    |
-| --------------------- | -------------------------- | ---------------------------------------------------------- |
-| `inventory-check`     | `handle_inventory_check`   | Fetch current stock levels from backend database           |
-| `ai-check`            | `handle_ai_check`          | Query n8n/storage AI for medication availability & location |
-| `update-stock`        | `handle_update_stock`      | Update inventory after medication is dispensed             |
-| `create-order`        | `handle_create_order`      | Create a new order record in the backend database          |
-| `update-checklist`    | `handle_update_checklist`  | Update medication checklist after AI verification          |
-| `check-carts`         | `handle_check_carts`       | Query available medication preparation carts              |
-| `create-cart`         | `handle_create_cart`       | Create a new cart and populate with checklist items        |
-| `update-cart-status`  | `handle_update_cart_status`| Update cart status (e.g., "Prepared" → "In-Use")          |
+| Topic                | Handler Function            | Purpose                                                     |
+| -------------------- | --------------------------- | ----------------------------------------------------------- |
+| `inventory-check`    | `handle_inventory_check`    | Fetch current stock levels from backend database            |
+| `ai-check`           | `handle_ai_check`           | Query n8n/storage AI for medication availability & location |
+| `update-stock`       | `handle_update_stock`       | Update inventory after medication is dispensed              |
+| `create-order`       | `handle_create_order`       | Create a new order record in the backend database           |
+| `update-checklist`   | `handle_update_checklist`   | Update medication checklist after AI verification           |
+| `check-carts`        | `handle_check_carts`        | Query available medication preparation carts                |
+| `create-cart`        | `handle_create_cart`        | Create a new cart and populate with checklist items         |
+| `update-cart-status` | `handle_update_cart_status` | Update cart status (e.g., "Prepared" → "In-Use")            |
 
 ### Configuration
 
@@ -292,6 +297,7 @@ The Python backend (`worker.py`) subscribes to the following Camunda topics:
 n8n runs as a separate service and exposes webhook endpoints that Camunda's Python worker calls during the `ai-check` task. The n8n workflow orchestrates:
 
 1. **AI Storage Worker** (via OpenAI GPT-4 Mini)
+
    - Receives medication inquiries (name, ID, required amount)
    - Queries AI language model to simulate storage worker decision-making
    - Determines if spare stock is available at alternative storage locations
@@ -307,11 +313,13 @@ n8n runs as a separate service and exposes webhook endpoints that Camunda's Pyth
 The n8n workflow (`My workflow_v4.json`) contains the following key nodes:
 
 - **Webhook Receivers**
+
   - `Webhook5`: Receives medication checklist initialization requests
   - `Webhook6`: Receives medication availability queries from Python worker
   - `Webhook7`: Receives cart status queries
 
 - **AI Processing**
+
   - `OpenAI Chat Model5`: Integrates with OpenAI API for AI decision-making
   - `AI Storage worker5`: LangChain agent that interprets AI responses
   - `Structured Output Parser5`: Ensures responses conform to expected JSON schema
@@ -321,18 +329,18 @@ The n8n workflow (`My workflow_v4.json`) contains the following key nodes:
 
 ### n8n Endpoints
 
-| Webhook ID                           | Purpose                                |
-| ------------------------------------ | -------------------------------------- |
-| `04ced486-2466-431f-b1fd-ea604848459b` | Checklist initialization               |
-| `ea2b22f1-ce36-4988-8f59-f67b7ce05c6b` | Medication availability check (AI)     |
-| `8c450380-3c3a-4de5-a3e4-5d030687aa1f` | Cart information retrieval             |
+| Webhook ID                             | Purpose                            |
+| -------------------------------------- | ---------------------------------- |
+| `04ced486-2466-431f-b1fd-ea604848459b` | Checklist initialization           |
+| `ea2b22f1-ce36-4988-8f59-f67b7ce05c6b` | Medication availability check (AI) |
+| `8c450380-3c3a-4de5-a3e4-5d030687aa1f` | Cart information retrieval         |
 
 ### Example AI Storage Worker Prompt
 
 ```
-You are a storage worker. You receive an order for a medication that is not available and 
+You are a storage worker. You receive an order for a medication that is not available and
 you check other storage locations for spare stock.
-You must respond only with valid JSON that matches this structure, with no extra text, 
+You must respond only with valid JSON that matches this structure, with no extra text,
 explanations, or comments.
 
 If you find the requested amount, respond with:
@@ -366,12 +374,12 @@ Here's how Camunda and n8n work together in a typical medication preparation sce
    └─→ Camunda publishes "ai-check" task
        Python worker sends POST to n8n webhook: /webhook/ea2b22f1-ce36-4988-8f59-f67b7ce05c6b
        Payload: {"medication_name": "...", "medication_id": "...", "amount": ...}
-       
+
        n8n workflow executes:
        ├─→ OpenAI Chat Model receives prompt with medication details
        ├─→ LangChain agent interprets AI response
        └─→ Structured Output Parser ensures valid JSON format
-       
+
        n8n returns: {"found": "Yes/No", "text": "..."}
        Python worker completes task with AI result
 
@@ -425,17 +433,55 @@ This allows the frontend to display real-time workflow progress and status updat
 
 ---
 
+# Frontend screenshots
+
+The following screenshots demonstrate the key features of the medication preparation and stock management system's frontend interface:
+
+## Dashboard View
+
+![Dashboard](data_files/images/dashboard.png)
+_Main dashboard displaying recent orders overview with real-time updates and refresh capabilities._
+
+## Order Creation View
+
+![Order Creation](data_files/images/create_order.png)
+_Create new medication orders with medication selection, quantity input, and rush order options._
+
+## Digital Carts View
+
+![Digital Carts](data_files/images/digital_carts.png)
+_Manage and track digital medication preparation carts with real-time status updates._
+
+## Inventory View
+
+![Inventory](data_files/images/inventory.png)
+_Monitor medication stock levels, locations, and availability across storage areas._
+
+## Checklist View
+
+![Checklist](data_files/images/checklist.png)
+_Digital checklist for medication preparation workflows ensuring standardized processes and quality control._
+
+## Workflow Log View
+
+![Workflow Log](data_files/images/log.png)
+_Real-time workflow event logging and monitoring for transparency and process tracking._
+
+[⬆️ Back to Top](#table-of-contents)
+
+---
+
 # Our project Forkflow Agenda
 
 ## Next Steps due by 20.11:
 
-| Done? | What                                                                                                                                                                                                                                               | Who                        |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| [X]   | Update Businessplan and Readme                                                                                                                                                                                                                     | Janosh                     |
-| [X]   | Define all the Users and Stakeholders of the System (eg. All the People who will interact with the System like "Storage Worker", "Nurse", "Doctor"... etc.) -> Define for "AS-IS" so we can then adapt to "SHOULD-BE"                              | Donna and Viktorija        |
-| [X]   | Define Data Objects (Checklist, Communication between Storage Worker, What info is needed to make an order, what should be stored about the medication in the Database (e.g. Name, Formula, Exp. data, producer, dosage...) Ideally in JSON format) | Viktorija and Donna        |
-| [X]   | Design the Frontend Elements, how would Doctors, Nurses etc want to interact with the System, how should it look like (e.g. as a Mockup)                                                                                                            | Merel |
-| [X]   | Define Teckstack used (e.g. Frontend (Vuejs) Backend(express?), DB (Postgresql), logic (Python), Workflow (Camunda or N8n?))                                                                                                                       | All                        |
+| Done? | What                                                                                                                                                                                                                                                | Who                 |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| [X]   | Update Businessplan and Readme                                                                                                                                                                                                                      | Janosh              |
+| [X]   | Define all the Users and Stakeholders of the System (eg. All the People who will interact with the System like "Storage Worker", "Nurse", "Doctor"... etc.) -> Define for "AS-IS" so we can then adapt to "SHOULD-BE"                               | Donna and Viktorija |
+| [X]   | Define Data Objects (Checklist, Communication between Storage Worker, What info is needed to make an order, what should be stored about the medication in the Database (e.g. Name, Formula, Exp. data, producer, dosage...) Ideally in JSON format) | Viktorija and Donna |
+| [X]   | Design the Frontend Elements, how would Doctors, Nurses etc want to interact with the System, how should it look like (e.g. as a Mockup)                                                                                                            | Merel               |
+| [X]   | Define Teckstack used (e.g. Frontend (Vuejs) Backend(express?), DB (Postgresql), logic (Python), Workflow (Camunda or N8n?))                                                                                                                        | All                 |
 
 ## Next Steps due by 27.11:
 
@@ -450,17 +496,16 @@ This allows the frontend to display real-time workflow progress and status updat
 
 ## Next Steps due by 06.12:
 
-| Done? | What                                                     | Who                    | % Done |
-| ----- | -------------------------------------------------------- | ---------------------- | ------ |
-| [X]   | Couple backend with Camunda (Orders internal+ external ) | Djorgdi, Merel, Janosh | 100%   |
-| [X]   | Demo user story                                          | Viktorija              | 100%   |
-| [X]   | Transform Demo user story into Frontend/Backend/Camunda  | Djorgdi, Merel, Janosh | 100%   |
-| [X]   | Think about AI possibilities                             | All                    | 100%   |
-| [X]   | Deployment, Markdown documentation and testing of group project  | All            | 100%   |
-
+| Done? | What                                                            | Who                    | % Done |
+| ----- | --------------------------------------------------------------- | ---------------------- | ------ |
+| [X]   | Couple backend with Camunda (Orders internal+ external )        | Djorgdi, Merel, Janosh | 100%   |
+| [X]   | Demo user story                                                 | Viktorija              | 100%   |
+| [X]   | Transform Demo user story into Frontend/Backend/Camunda         | Djorgdi, Merel, Janosh | 100%   |
+| [X]   | Think about AI possibilities                                    | All                    | 100%   |
+| [X]   | Deployment, Markdown documentation and testing of group project | All                    | 100%   |
 
 ## Next Steps due by 17.12:
 
-| Done? | What                                                     | Who                    | % Done |
-| ----- | -------------------------------------------------------- | ---------------------- | ------ |
-| [X]   | Finalisation of group project                            | All                    | 100%   |
+| Done? | What                          | Who | % Done |
+| ----- | ----------------------------- | --- | ------ |
+| [X]   | Finalisation of group project | All | 100%   |
