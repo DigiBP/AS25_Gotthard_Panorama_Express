@@ -17,7 +17,6 @@
   - [Challenges and Requirements](#challenges-and-requirements-addressed-by-the-to-be-process)
   - [Users and Stakeholders](#users-and-stakeholders)
 - [Technologies Used](#technologies-used)
-  - [Frontend Mockups](#frontend-mockups)
 - [Workflow Orchestration](#workflow-orchestration)
   - [Camunda BPMN Engine](#camunda-bpmn-engine)
   - [n8n Integration & AI Storage Worker](#n8n-integration--ai-storage-worker)
@@ -172,22 +171,33 @@ The TO-BE workflow follows a structured sequence:
 
 1. **Medication preparation**  
    Medication is prepared according to standardized steps and documented digitally to ensure clarity and traceability.
-   After the procedure, the medication status is explicitly evaluated: - fully used - partially used and eligible for storage - or discarded
+   After the procedure, the medication status is explicitly evaluated: 
+      - fully used 
+      - partially used and eligible for storage 
+      - or discarded
 
    This decision is captured in the workflow and determines the subsequent process path.
 
 2. **Medication Usage and Post-Procedure Handling**  
    If medication is **fully used**, the process continues with documentation and closes the preparation cycle.
-   If medication is **partially used**, the workflow guides the user to: - document remaining quantity - decide on storage eligibility - and assign a storage location
+   If medication is **partially used**, the workflow guides the user to: 
+      - document remaining quantity 
+      - decide on storage eligibility 
+      - and assign a storage location
 
    Discarded medication is recorded accordingly to maintain transparency and accountability.
 
 3. **Storage and availability Management**  
    Stored medication becomes visible within the system as available stock.  
-   The TO-BE process ensures that: - storage locations are documented - available quantities are updated
+   The TO-BE process ensures that: 
+      - storage locations are documented 
+      - available quantities are updated
 
 4. **Restocking and coordination**  
-   The TO-BE process explicitly models interactions between: - anaesthesia staff (preparation and usage), - storage workers (availability and restocking), - and system-supported documentation steps.
+   The TO-BE process explicitly models interactions between: 
+      - anaesthesia staff (preparation and usage)
+      - storage workers (availability and restocking)
+      - and system-supported documentation steps.
 
 By making responsibilities and handovers explicit, the process reduces ambiguity, interruptions, and information loss.
 
@@ -208,20 +218,9 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 
 - Frontend: Vue.js
 - Backend: FastAPI
-- Database: SQLite (to be specified)
+- Database: PostgreSQL, docker
 - Business Logic: Python
-- Workflow Engine: Langflow
-
-## Frontend Mockups
-
-### Proposed Screens
-
-- <del>[ ] Login Screen</del> -> waiting time
-- [ ] Dashboard (orders & inventory overview)
-- [ ] Order Creation Form
-- [ ] Inventory Management View
-- <del>[ ] User Profile/Settings<del> -> wasting time
-- [ ] Reports and Analytics
+- Workflow Engine: Camunda, n8n
 
 [⬆️ Back to Top](#table-of-contents)
 
@@ -426,34 +425,42 @@ This allows the frontend to display real-time workflow progress and status updat
 
 ---
 
-# LEFTOVERS from old README.md
+# Our project Forkflow Agenda
 
-## Next Steps TILL 20.11:
+## Next Steps due by 20.11:
 
 | Done? | What                                                                                                                                                                                                                                               | Who                        |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | [X]   | Update Businessplan and Readme                                                                                                                                                                                                                     | Janosh                     |
 | [X]   | Define all the Users and Stakeholders of the System (eg. All the People who will interact with the System like "Storage Worker", "Nurse", "Doctor"... etc.) -> Define for "AS-IS" so we can then adapt to "SHOULD-BE"                              | Donna and Viktorija        |
-| [X]   | Define Data Objects (Checklist, Communication between Storage Worker, What info is needed to make an order, what should be stored about the medication in the Database (e.g. Name, Formula, Exp. data, producer, dosage...) Idealy in JSON format) | Viktorija and Donna        |
-| [ ]   | Design the Frontend Elements, how would Doctors, Nurses etc want to interact with the System, how sould it look like (e.g. as a Mockup)                                                                                                            | Donna, Viktorija and Merel |
+| [X]   | Define Data Objects (Checklist, Communication between Storage Worker, What info is needed to make an order, what should be stored about the medication in the Database (e.g. Name, Formula, Exp. data, producer, dosage...) Ideally in JSON format) | Viktorija and Donna        |
+| [X]   | Design the Frontend Elements, how would Doctors, Nurses etc want to interact with the System, how should it look like (e.g. as a Mockup)                                                                                                            | Merel |
 | [X]   | Define Teckstack used (e.g. Frontend (Vuejs) Backend(express?), DB (Postgresql), logic (Python), Workflow (Camunda or N8n?))                                                                                                                       | All                        |
 
-## Next Steps TILL 27.11:
+## Next Steps due by 27.11:
 
 | Done? | What                                          | Who               | % Done |
 | ----- | --------------------------------------------- | ----------------- | ------ |
-| [X]   | Set up Database                               | Djordji           |        |
-| [X]   | Design Backend APIS                           | Djorgdi , Merel   |        |
-| [X]   | Setup frontend with mockup for main views     | Merel             | 99%    |
-| [ ]   | Finalize Data elements in JSON                | Donna & Viktorija |        |
-| [ ]   | Update Projectplan and Summarize Developement | Janosh            |        |
-| [ ]   | Start Modeling Flow in Camunda / Langflow     | Janosh            |        |
+| [X]   | Set up Database                               | Djordji           | 100%   |
+| [X]   | Design Backend APIS                           | Djorgdi , Merel   | 100%   |
+| [X]   | Setup frontend with mockup for main views     | Merel             | 100%   |
+| [X]   | Finalize Data elements in JSON                | Donna & Viktorija | 100%   |
+| [X]   | Update Projectplan and Summarize Developement | Janosh            | 100%   |
+| [ ]   | Start Modeling Flow in Camunda / Langflow     | Janosh            | 98%    |
 
-## Next Steps TILL 06.12:
+## Next Steps due by 06.12:
 
-| Done? | What                                                     | Who | % Done |
-| ----- | -------------------------------------------------------- | --- | ------ |
-| [ ]   | Couple backend with Camundo (Orders internal+ external ) |     |        |
-| [ ]   | Demo user story                                          |     |        |
-| [ ]   | Transform Demo user story into Frontend/Backend/Camunda  |     |        |
-| [ ]   | Think about AI possibilities                             |     |        |
+| Done? | What                                                     | Who                    | % Done |
+| ----- | -------------------------------------------------------- | ---------------------- | ------ |
+| [X]   | Couple backend with Camunda (Orders internal+ external ) | Djorgdi, Merel, Janosh | 100%   |
+| [X]   | Demo user story                                          | Viktorija              | 100%   |
+| [X]   | Transform Demo user story into Frontend/Backend/Camunda  | Djorgdi, Merel, Janosh | 100%   |
+| [X]   | Think about AI possibilities                             | All                    | 100%   |
+| [X]   | Deployment, Markdown documentation and testing of group project  | All            | 100%   |
+
+
+## Next Steps due by 17.12:
+
+| Done? | What                                                     | Who                    | % Done |
+| ----- | -------------------------------------------------------- | ---------------------- | ------ |
+| [X]   | Finalisation of group project                            | All                    | 100%   |
