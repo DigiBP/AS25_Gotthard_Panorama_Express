@@ -9,7 +9,7 @@
 - [Project Members](#project-members)
 - [Abstract & Project Overview](#abstract--project-overview)
 - [AS-IS Process](#as-is-process)
-  - [Key Limitations of the AS-IS Process](#key-limitations-of-the-as-is-process)
+  - [Key Limitations of the AS-IS Process (#key-limitations-of-the-as-is-process)
   - [AS-IS BPMN Diagram](#as-is-bpmn-diagram)
   - [Project Goal](#project-goal)
 - [TO-BE Process](#to-be-process)
@@ -17,11 +17,23 @@
   - [Challenges and Requirements](#challenges-and-requirements-addressed-by-the-to-be-process)
   - [Users and Stakeholders](#users-and-stakeholders)
 - [Technologies Used](#technologies-used)
+- [Backend Overview](#backend-overview)
+  - [Architecture](#architecture)
+  - [Application Entry Point (`main.py`)](#application-entry-point-mainpy)
+  - [Database & Seeding](#database--seeding)
+  - [Domain Models](#domain-models)
+  - [API Layer (Routers)](#api-layer-routers)
+  - [Service Layer (Business Logic)](#service-layer-business-logic)
+  - [Frontend Hosting](#frontend-hosting)
+  - [Docker Infrastructure](#docker-infrastructure)
+  - [Typical Use Cases](#typical-use-cases)
 - [Workflow Orchestration](#workflow-orchestration)
   - [Camunda BPMN Engine](#camunda-bpmn-engine)
   - [n8n Integration & AI Storage Worker](#n8n-integration--ai-storage-worker)
   - [End-to-End Flow](#end-to-end-flow)
+- [Frontend screenshots](#frontend-screenshots)
 - [Limitations](#limitations)
+- [Project Workflow Agenda](#our-project-workflow-agenda)
 
 ---
 
@@ -233,6 +245,196 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 
 ---
 
+# Backend Overview
+
+This part is an **asynchronous FastAPI backend** designed for **medical inventory, medication, 
+surgical cart, and order management**, integrated with **Camunda BPM**, **n8n**, **WebSockets**, and **Docker**.
+
+The system supports **automated medical workflows** (e.g. operating room preparation) including:
+
+* Inventory validation
+* AI / automation checks via n8n
+* Decision logic executed in Camunda BPMN workflows
+* Real-time frontend notifications
+
+
+## Architecture
+
+![Architecture](data_files/Architecture.svg)
+
+
+# Application Entry Point (`main.py`)
+
+## Application Lifecycle
+
+FastAPI uses a **lifespan context manager** to initialize critical components:
+
+* Database initialization and table creation
+* Automatic seeding of demo data
+* Startup of Camunda External Task workers
+
+```python
+await init_db()
+start_camunda_workers()
+```
+
+## Middleware
+
+* **CORS** enabled for the Vue frontend (`localhost:5173`)
+* Fully **asynchronous stack** (FastAPI, SQLModel, asyncpg)
+
+## Router Structure
+
+* `/api/*` → Main REST API
+* `/front/*` → Vue.js Single Page Application
+* `/notifications/ws` → WebSocket endpoint for live updates
+
+
+# Database & Seeding
+
+## Technology Stack
+
+* **PostgreSQL 16**
+* **SQLModel** (SQLAlchemy + Pydantic)
+* **Async SQLAlchemy engine**
+
+## Automatic Seeding
+
+On startup, the backend populates the database from JSON files:
+
+* Medications
+* Inventory items
+* Surgical carts
+* Cart items
+
+
+
+# Domain Models
+
+## Medication
+
+Master data for medications:
+
+* ID
+* name
+* dosage
+* chemical stability
+* restrictions
+
+## Inventory
+
+Physical stock entries:
+
+* Batch number
+* Quantity and unit
+* Minimum stock threshold
+* Expiration date
+* Storage location
+
+## Cart (Surgical Cart)
+
+Represents an operating room cart:
+
+* Patient information
+* Operation metadata
+* Room and anesthesia type
+* Status:
+
+  * `Prepared`
+  * `In-Use`
+  * `Closed`
+
+## CartItem
+
+Links inventory to carts:
+
+* Automatically decreases inventory on add
+* Restores inventory when removed
+
+## Order
+
+Medication orders:
+
+* JSON-based medication list
+* Internal vs. external
+* Rush order support
+
+## Checklist
+
+Logical and file-based medication checklists used for pre-op validation
+
+
+# API Layer (Routers)
+
+## Core Endpoints
+
+| Endpoint         | Purpose               |
+| ---------------- | --------------------- |
+| `/medications`   | Medication catalog    |
+| `/inventory`     | Inventory management  |
+| `/carts`         | Surgical carts        |
+| `/cart-items`    | Cart contents         |
+| `/orders`        | Orders                |
+| `/checklist`     | Medication checklists |
+| `/notifications` | WebSocket events      |
+| `/front`         | Frontend hosting      |
+| `/health`        | Health check          |
+
+
+# Service Layer (Business Logic)
+
+## Key Rules
+
+* Inventory is reduced when a cart item is added
+* Inventory is restored when a cart item is removed
+* Strict validation before any state change
+* Clean separation of API and business logic
+
+
+# Frontend Hosting
+
+* Vue.js build is served from `/public`
+* FastAPI serves:
+
+  * SPA root
+  * Static assets
+  * Client-side routing fallback
+
+No separate web server is required.
+
+
+# Docker Infrastructure
+
+## Services
+
+### PostgreSQL
+
+* Persistent volumes
+* Shared database for backend and n8n
+
+### n8n
+
+* Uses PostgreSQL as backend
+* Basic authentication enabled
+* Webhook-based communication
+
+The FastAPI backend itself is currently **not containerized**, but fully compatible with Docker-based infrastructure.
+
+
+# Typical Use Cases
+
+* Automating operating room preparation
+* Detecting medication shortages
+* AI-assisted inventory checks
+* Automatic order creation
+* Live workflow monitoring in the frontend
+
+
+[⬆️ Back to Top](#table-of-contents)
+
+-----
+
+
 # Workflow Orchestration
 
 This section describes how the Camunda BPMN engine orchestrates the medication preparation workflow and how n8n bridges external systems and AI services to automate key decision points.
@@ -240,6 +442,12 @@ This section describes how the Camunda BPMN engine orchestrates the medication p
 ## Camunda BPMN Engine
 
 **Camunda** is the central workflow orchestration engine that controls the entire medication preparation and stock management process.
+
+### Architecture
+
+* Uses **Camunda External Task Workers**
+* One worker thread per topic
+* Multi-tenant configuration
 
 ### Key Responsibilities:
 
@@ -282,6 +490,9 @@ The Python backend (`worker.py`) subscribes to the following Camunda topics:
 | `check-carts`        | `handle_check_carts`        | Query available medication preparation carts                |
 | `create-cart`        | `handle_create_cart`        | Create a new cart and populate with checklist items         |
 | `update-cart-status` | `handle_update_cart_status` | Update cart status (e.g., "Prepared" → "In-Use")            |
+
+Workflow results are returned as **Camunda process variables**.
+
 
 ### Configuration
 
@@ -355,7 +566,9 @@ If you do not find the requested amount, respond with:
 {"found": "No", "text": "Sorry, we seem to not have any left, I'll order more."}
 ```
 
----
+[⬆️ Back to Top](#table-of-contents)
+
+-----
 
 ## End-to-End Flow
 
@@ -427,17 +640,6 @@ This allows the frontend to display real-time workflow progress and status updat
 
 ---
 
-# Limitations
-
-- **Prototype-level implementation:** The project demonstrates the concept and workflow design, not a production-ready system.
-- **No hospital system integration:** Interfaces to real clinical systems (e.g., HIS/EMR, pharmacy systems, barcode/RFID, procurement) are out of scope.
-- **No analytics/forecasting features:** Automated alerts, and predictive planning are not implemented in this version.
-- **Manual demo input:** For demonstration purposes, some data entries and status updates are performed manually.
-
-[⬆️ Back to Top](#table-of-contents)
-
----
-
 # Frontend screenshots
 
 The following screenshots demonstrate the key features of the medication preparation and stock management system's frontend interface:
@@ -476,7 +678,19 @@ _Real-time workflow event logging and monitoring for transparency and process tr
 
 ---
 
-# Our project Forkflow Agenda
+# Limitations
+
+- **Prototype-level implementation:** The project demonstrates the concept and workflow design, not a production-ready system.
+- **No hospital system integration:** Interfaces to real clinical systems (e.g., HIS/EMR, pharmacy systems, barcode/RFID, procurement) are out of scope.
+- **No analytics/forecasting features:** Automated alerts, and predictive planning are not implemented in this version.
+- **Manual demo input:** For demonstration purposes, some data entries and status updates are performed manually.
+
+[⬆️ Back to Top](#table-of-contents)
+
+
+---
+
+# Our project Workflow Agenda
 
 ## Next Steps due by 20.11:
 
