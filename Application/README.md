@@ -14,7 +14,7 @@ Make sure `node` and `npm` are available in your PATH and that `python` points t
 
 ## Backend (FastAPI)
 
-The backend lives in `./backend` and uses FastAPI + SQLModel with a local SQLite database.
+The backend lives in `./backend` and uses FastAPI + SQLModel with a local PostgreSQL database.
 
 1. Create and activate a Python virtual environment (recommended):
 

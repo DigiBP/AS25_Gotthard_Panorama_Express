@@ -24,3 +24,5 @@ tzdata==2025.2
 uvicorn==0.38.0
 aiofiles==25.1.0
 websockets==15.0.1
+requests==2.32.5
+camunda-external-task-client-python3==4.5.0
