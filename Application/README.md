@@ -52,6 +52,7 @@ The backend will auto-create a local SQLite database at `Application/backend/dat
 ## Frontend (Vue 3 + Vite)
 
 The frontend lives in `./frontend` and is a Vite + Vue 3 application.
+Frontend is automatically started with the backend and doesn't need to get started sepearte.
 
 1. Install node dependencies:
 
@@ -77,8 +78,7 @@ The Vite dev server runs by default on http://localhost:5173. The frontend is co
 - Build frontend for production:
   - `npm run build`
 
-
-## Docker beginners 
+## Docker for beginners
 
 `docker compose up -d db`
 `docker compose up -d n8n`
