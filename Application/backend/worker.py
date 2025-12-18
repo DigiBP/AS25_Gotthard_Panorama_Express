@@ -1,5 +1,7 @@
 import datetime
+import json
 import logging
+import os
 import threading
 
 logging.basicConfig(level=logging.INFO)
@@ -195,9 +197,39 @@ def handle_update_stock(task: ExternalTask) -> TaskResult:
     Returns:
         TaskResult: The result to send back to Camunda (complete or failure).
     """
-    inventory_id = task.get_variable("inventory_id")
+    inventory_id_str = task.get_variable("inventory_id")
     current_stock = task.get_variable("current_stock")
     amount = task.get_variable("amount")
+    
+    # Convert string to integer since Camunda stores variables as strings
+    # Handle various string formats that Camunda might use
+    try:
+        if isinstance(inventory_id_str, int):
+            inventory_id = inventory_id_str
+        elif isinstance(inventory_id_str, str):
+            # Remove surrounding quotes if present (handles "\"9\"" -> "9")
+            cleaned_str = inventory_id_str.strip('"')
+            # Try to parse as JSON first (handles "9" -> 9)
+            try:
+                import json
+                parsed = json.loads(cleaned_str)
+                if isinstance(parsed, int):
+                    inventory_id = parsed
+                else:
+                    inventory_id = int(parsed)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # If not JSON, try direct conversion
+                inventory_id = int(cleaned_str)
+        else:
+            inventory_id = int(inventory_id_str)
+    except (ValueError, TypeError) as e:
+        return task.failure(
+            error_message="Invalid inventory_id format",
+            error_details=f"inventory_id must be a valid integer, got: {inventory_id_str} (type: {type(inventory_id_str)}), error: {e}",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+    
     new_amount = current_stock - amount
 
     logging.info(f"[Bridge] Updating Inventory ID {inventory_id} to {new_amount}")
@@ -411,7 +443,7 @@ def handle_create_cart(task: ExternalTask) -> TaskResult:
             retry_timeout=1000,
         )
 
-    logging_to_frontend("Bridge", "Creating cart with checklist items")
+        logging_to_frontend("Bridge", f"Creating cart with {len(default_cart_items)} medications from template")
 
     # Create the cart with default data, ensuring fallbacks for None
     cart_data = {
@@ -437,31 +469,146 @@ def handle_create_cart(task: ExternalTask) -> TaskResult:
         cart = create_cart_response.json()
         logging.info(f"[DEBUG] Created cart: {cart}")
         
-        # Seed with requested medication
-        medication_id = task.get_variable("medication_id")
-        amount = task.get_variable("amount", 1)
-        if medication_id:
-            add_item_response = requests.post(
-                f"{BACKEND_API_URL}/cart-items",
-                json={"cartId": cart["id"], "medicationId": medication_id, "amount": amount}
-            )
-            if add_item_response.status_code != 200:
-                logging.warning(f"Failed to add requested medication {medication_id}: {add_item_response.text}")
+        # Helper function to get inventory_id for a medication
+        def get_inventory_id(medication_id, required_amount=1):
+            try:
+                response = requests.get(f"{BACKEND_API_URL}/inventory/{medication_id}")
+                if response.status_code == 200:
+                    inventories = response.json()
+                    # Find an inventory item with sufficient stock
+                    for inv in inventories:
+                        if inv.get("amount", 0) >= required_amount:
+                            return inv["id"]
+                    # If no inventory has enough stock, return the first one (or None)
+                    return inventories[0]["id"] if inventories else None
+                else:
+                    logging.warning(f"Failed to get inventory for {medication_id}: {response.status_code}")
+                    return None
+            except Exception as e:
+                logging.warning(f"Error getting inventory for {medication_id}: {e}")
+                return None
         
-        # Seed with standard medications (update list as needed)
-        standard_medications = [
-            {"medicationId": "painkiller-001", "amount": 1},
-            {"medicationId": "antibiotic-001", "amount": 1},
+        # Stock cart with default medications plus Camunda-requested medication
+        default_cart_items = [
+            {"medication_id": "local_anesthetic-001", "amount": 1.0, "time_sensitive": False},
+            {"medication_id": "hypnotic-001", "amount": 1.0, "time_sensitive": True},
+            {"medication_id": "opioid-001", "amount": 1.0, "time_sensitive": True},
+            {"medication_id": "opioid-002", "amount": 1.0, "time_sensitive": True},
+            {"medication_id": "vasoactive-002", "amount": 1.0, "time_sensitive": False},
+            {"medication_id": "vasoactive-001", "amount": 1.0, "time_sensitive": False},
+            {"medication_id": "analgetic-001", "amount": 1.0, "time_sensitive": False},
+            {"medication_id": "antiemetic-001", "amount": 1.0, "time_sensitive": False},
+            {"medication_id": "infusion-001", "amount": 1.0, "time_sensitive": False},
+            {"medication_id": "infusion-003", "amount": 1.0, "time_sensitive": False}
         ]
-        for item in standard_medications:
-            add_item_response = requests.post(
-                f"{BACKEND_API_URL}/cart-items",
-                json={"cartId": cart["id"], **item}
-            )
-            if add_item_response.status_code != 200:
-                logging.warning(f"Failed to add standard medication {item['medicationId']}: {add_item_response.text}")
         
-        return task.complete({"cart": cart})
+        # Get Camunda variables (these should be set by the BPMN process)
+        medication_id = task.get_variable("medication_id")
+        amount_raw = task.get_variable("amount")
+        
+        # Validate required variables
+        if not medication_id:
+            return task.failure(
+                error_message="medication_id is required",
+                error_details="The BPMN process must set the medication_id variable",
+                max_retries=0,
+                retry_timeout=1000,
+            )
+        
+        if amount_raw is None:
+            return task.failure(
+                error_message="amount is required", 
+                error_details="The BPMN process must set the amount variable",
+                max_retries=0,
+                retry_timeout=1000,
+            )
+        
+        # Convert amount to float, handling string conversion from Camunda
+        try:
+            if isinstance(amount_raw, str):
+                # Handle JSON string format from Camunda
+                import json
+                try:
+                    parsed = json.loads(amount_raw)
+                    amount = float(parsed)
+                except (json.JSONDecodeError, ValueError):
+                    amount = float(amount_raw)
+            else:
+                amount = float(amount_raw)
+        except (ValueError, TypeError):
+            return task.failure(
+                error_message="Invalid amount format",
+                error_details=f"amount must be a valid number, got: {amount_raw}",
+                max_retries=0,
+                retry_timeout=1000,
+            )
+        
+        # Debug logging for Camunda variables
+        logging.info(f"[DEBUG] Camunda variables - medication_id: {medication_id}, amount_raw: {amount_raw}, amount_converted: {amount}")
+        logging_to_frontend("Bridge", f"Creating cart with medication: {medication_id}, amount: {amount}")
+        if medication_id:
+            # Check if requested medication is already in defaults
+            found = False
+            for item in default_cart_items:
+                if item["medication_id"] == medication_id:
+                    # Update amount to the requested amount
+                    item["amount"] = amount
+                    found = True
+                    logging.info(f"[DEBUG] Updated default {medication_id} amount to {amount}")
+                    break
+            
+            # If not in defaults, add it
+            if not found:
+                default_cart_items.append({
+                    "medication_id": medication_id,
+                    "amount": amount,
+                    "time_sensitive": False  # Default for requested medications
+                })
+                logging.info(f"[DEBUG] Added requested medication {medication_id} with amount {amount}")
+        
+        # Add all medications to cart using bulk API
+        bulk_items = []
+        for item in default_cart_items:
+            inventory_id = get_inventory_id(item["medication_id"], item["amount"])
+            if inventory_id:
+                bulk_items.append({
+                    "cart_id": cart["id"],
+                    "inventory_id": inventory_id,
+                    "medication_id": item["medication_id"],
+                    "amount": item["amount"],
+                    "time_sensitive": item["time_sensitive"]
+                })
+            else:
+                logging.warning(f"No inventory found for {item['medication_id']}")
+        
+        if bulk_items:
+            bulk_response = requests.post(
+                f"{BACKEND_API_URL}/cart-items/add-bulk",
+                json=bulk_items
+            )
+            if bulk_response.status_code == 200:
+                added_items = bulk_response.json()
+                logging.info(f"[DEBUG] Successfully added {len(added_items)}/{len(bulk_items)} medications to cart {cart['id']} in bulk")
+                if len(added_items) < len(bulk_items):
+                    logging.warning(f"[DEBUG] Partial success: {len(bulk_items) - len(added_items)} medications skipped due to insufficient inventory")
+            else:
+                logging.warning(f"Bulk add failed: {bulk_response.text}")
+                # Fallback to individual adds if bulk fails
+                added_count = 0
+                skipped_count = 0
+                for item_data in bulk_items:
+                    add_response = requests.post(f"{BACKEND_API_URL}/cart-items/add", json=item_data)
+                    if add_response.status_code == 200:
+                        added_count += 1
+                    else:
+                        skipped_count += 1
+                        logging.warning(f"Failed to add {item_data['medication_id']}: {add_response.text}")
+                logging.info(f"[DEBUG] Fallback: added {added_count}/{len(bulk_items)} medications individually, {skipped_count} skipped")
+        else:
+            logging.warning("No medications could be added to cart (no inventory available)")
+        
+        # Return both cart object and cart_id for Camunda compatibility
+        return task.complete({"cart": cart, "cart_id": cart["id"]})
 
     except Exception as e:
         return task.failure(
@@ -481,12 +628,41 @@ def handle_update_cart_status(task: ExternalTask) -> TaskResult:
     Returns:
         TaskResult: The result to send back to Camunda (complete or failure).
     """
-    cart_id = task.get_variable("cart_id")
+    cart_id_str = task.get_variable("cart_id")
 
-    if not cart_id:
+    if not cart_id_str:
         return task.failure(
             error_message="cart_id is required",
             error_details="cart_id parameter is missing",
+            max_retries=0,
+            retry_timeout=1000,
+        )
+
+    # Convert string to integer since Camunda stores variables as strings
+    # Handle various string formats that Camunda might use
+    try:
+        if isinstance(cart_id_str, int):
+            cart_id = cart_id_str
+        elif isinstance(cart_id_str, str):
+            # Remove surrounding quotes if present (handles "\"9\"" -> "9")
+            cleaned_str = cart_id_str.strip('"')
+            # Try to parse as JSON first (handles "9" -> 9)
+            try:
+                import json
+                parsed = json.loads(cleaned_str)
+                if isinstance(parsed, int):
+                    cart_id = parsed
+                else:
+                    cart_id = int(parsed)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # If not JSON, try direct conversion
+                cart_id = int(cleaned_str)
+        else:
+            cart_id = int(cart_id_str)
+    except (ValueError, TypeError) as e:
+        return task.failure(
+            error_message="Invalid cart_id format",
+            error_details=f"cart_id must be a valid integer, got: {cart_id_str} (type: {type(cart_id_str)}), error: {e}",
             max_retries=0,
             retry_timeout=1000,
         )

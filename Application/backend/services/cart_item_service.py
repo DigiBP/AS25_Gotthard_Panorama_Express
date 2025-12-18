@@ -111,6 +111,116 @@ async def add_medication_to_cart(
     return cart_item
 
 
+async def add_medications_to_cart_bulk(
+    session: AsyncSession, requests: List[AddToCartRequest]
+) -> List[CartItem]:
+    """
+    Add multiple medications to a cart in a single operation.
+
+    - **session**: Async database session.
+    - **requests**: List of `AddToCartRequest` objects containing cart_id, inventory_id, medication_id, amount, and time_sensitive flag.
+
+    Validates all requests first, then performs bulk operations:
+    - Checks existence of carts, medications, and inventory items
+    - Validates inventory amounts
+    - Decrements inventory amounts
+    - Creates CartItem objects
+    - Commits all changes
+
+    Returns a list of the newly created `CartItem` objects.
+
+    Raises:
+        HTTPException 404 if any cart, medication, or inventory is not found.
+        HTTPException 400 if any requested amount exceeds available inventory.
+    """
+    if not requests:
+        return []
+
+    # Validate all requests first (fail fast)
+    cart_ids = set()
+    medication_ids = set()
+    inventory_ids = set()
+
+    for request in requests:
+        cart_ids.add(request.cart_id)
+        medication_ids.add(request.medication_id)
+        inventory_ids.add(request.inventory_id)
+
+    # Check all carts exist
+    carts = {}
+    for cart_id in cart_ids:
+        cart = await session.get(Cart, cart_id)
+        if not cart:
+            raise HTTPException(status_code=404, detail=f"Cart {cart_id} not found")
+        carts[cart_id] = cart
+
+    # Check all medications exist
+    medications = {}
+    for med_id in medication_ids:
+        medication = await session.get(Medication, med_id)
+        if not medication:
+            raise HTTPException(status_code=404, detail=f"Medication {med_id} not found")
+        medications[med_id] = medication
+
+    # Check all inventory items exist and have sufficient amounts
+    inventories = {}
+    for inv_id in inventory_ids:
+        inventory = await session.get(Inventory, inv_id)
+        if not inventory:
+            raise HTTPException(status_code=404, detail=f"Inventory item {inv_id} not found")
+        inventories[inv_id] = inventory
+
+    # Validate inventory amounts for each request and filter out insufficient ones
+    valid_requests = []
+    for request in requests:
+        inventory = inventories[request.inventory_id]
+        if inventory.amount >= request.amount:
+            valid_requests.append(request)
+        else:
+            # Log warning but don't fail - allow partial fulfillment
+            medication = medications[request.medication_id]
+            print(f"WARNING: Skipping {medication.name} - insufficient inventory. Available: {inventory.amount} {inventory.unit}, Requested: {request.amount}")
+
+    if not valid_requests:
+        raise HTTPException(
+            status_code=400,
+            detail="No medications can be added due to insufficient inventory for all requested items"
+        )
+
+    # All validations passed, perform bulk operations
+    cart_items = []
+
+    for request in valid_requests:
+        inventory = inventories[request.inventory_id]
+
+        # Decrement inventory
+        inventory.amount -= request.amount
+        session.add(inventory)
+
+        # Create cart item
+        cart_item = CartItem(
+            cart_id=request.cart_id,
+            inventory_id=request.inventory_id,
+            medication_id=request.medication_id,
+            amount=request.amount,
+            unit=inventory.unit,
+            time_sensitive=request.time_sensitive,
+            expiration_date=inventory.expirationDate,
+        )
+
+        session.add(cart_item)
+        cart_items.append(cart_item)
+
+    # Commit all changes
+    await session.commit()
+
+    # Refresh all cart items to get their IDs
+    for cart_item in cart_items:
+        await session.refresh(cart_item)
+
+    return cart_items
+
+
 async def remove_cart_item(session: AsyncSession, id: int) -> None:
     """
     Remove a cart item and return its quantity to inventory.

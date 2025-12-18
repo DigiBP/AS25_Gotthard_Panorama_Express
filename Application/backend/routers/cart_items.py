@@ -11,6 +11,7 @@ from Application.backend.models.cart_item import (
 )
 from Application.backend.services.cart_item_service import (
     add_medication_to_cart,
+    add_medications_to_cart_bulk,
     get_all_cart_items,
     get_cart_contents,
     get_expiring_items,
@@ -78,6 +79,22 @@ async def add_to_cart(
     Returns the newly added `CartItem`.
     """
     return await add_medication_to_cart(session, request)
+
+
+@router.post("/add-bulk", response_model=List[CartItem], summary="Add multiple medications to a cart")
+async def add_to_cart_bulk(
+    requests: List[AddToCartRequest] = Body(..., description="List of cart item data to add"),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Add multiple medications to a cart in a single request.
+
+    - **requests**: List of cart item data (medication, amount, cart_id, etc.).
+    - **session**: Async database session (automatically injected).
+
+    Returns a list of the newly added `CartItem` objects.
+    """
+    return await add_medications_to_cart_bulk(session, requests)
 
 
 @router.delete("/{cart_item_id}", summary="Remove a cart item")

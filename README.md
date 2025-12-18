@@ -121,6 +121,12 @@ The overall goal is to improve traceability, reduce waste, and provide better gu
 ![V3](Camunda/Update_3.0.png)
 _Figure: TO-BE BPMN model of the digital medication preparation and stock management process._
 
+## Camunda BPMN Diagram
+
+![V3](Camunda/Camunda.png)
+Figure: Camunda BPMN model of the process in automated steps
+
+
 ## Challenges and Requirements Addressed by the TO-BE Process
 
 | Challenge                                           | Requirement                                                   |
@@ -210,20 +216,7 @@ The BPMN serves as a **conceptual and prototype-level design**, providing a soli
 - Backend: FastAPI
 - Database: SQLite (to be specified)
 - Business Logic: Python
-- Workflow Engine: Langflow
-
-## Frontend Mockups
-
-### Proposed Screens
-
-- <del>[ ] Login Screen</del> -> waiting time
-- [ ] Dashboard (orders & inventory overview)
-- [ ] Order Creation Form
-- [ ] Inventory Management View
-- <del>[ ] User Profile/Settings<del> -> wasting time
-- [ ] Reports and Analytics
-
-[⬆️ Back to Top](#table-of-contents)
+- Workflow Engine: Camunda and n8n
 
 ---
 
@@ -238,7 +231,7 @@ This section describes how the Camunda BPMN engine orchestrates the medication p
 ### Key Responsibilities:
 
 1. **Process Definition & Execution**
-   - Executes the TO-BE BPMN workflow model stored in Camunda
+   - Executes the Camunda BPMN workflow model stored in Camunda
    - Manages process instances for each medication order/preparation cycle
    - Maintains process state and variable persistence
 
@@ -290,7 +283,7 @@ The Python backend (`worker.py`) subscribes to the following Camunda topics:
 
 ### Architecture Overview
 
-n8n runs as a separate service and exposes webhook endpoints that Camunda's Python worker calls during the `ai-check` task. The n8n workflow orchestrates:
+n8n runs as a separate service and exposes webhook endpoints that Camunda's Python worker calls during tasks. The n8n workflow orchestrates:
 
 1. **AI Storage Worker** (via OpenAI GPT-4 Mini)
    - Receives medication inquiries (name, ID, required amount)
@@ -306,6 +299,8 @@ n8n runs as a separate service and exposes webhook endpoints that Camunda's Pyth
 ### n8n Workflow Nodes
 
 The n8n workflow (`My workflow_v4.json`) contains the following key nodes:
+
+#### In previous n8n implementations v_1 to v_3 the idea was to run the whole logic via n8n. This had to be trimmed due to the Camunda & BPMN usage requirements 
 
 - **Webhook Receivers**
   - `Webhook5`: Receives medication checklist initialization requests
